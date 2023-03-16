@@ -199,3 +199,9 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/scala,visualstudiocode,macos,intellij+all,java,windows
 /data
+/.bloop
+/.metals
+/project
+/target
+/src/main/scala/.scala-build
+/Silver-Vulture.code-workspace

@@ -205,3 +205,5 @@ $RECYCLE.BIN/
 /target
 /src/main/scala/.scala-build
 /Silver-Vulture.code-workspace
+/src/main/scala/target
+/metastore_db

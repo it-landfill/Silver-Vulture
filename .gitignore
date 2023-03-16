@@ -198,3 +198,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/scala,visualstudiocode,macos,intellij+all,java,windows
+/data

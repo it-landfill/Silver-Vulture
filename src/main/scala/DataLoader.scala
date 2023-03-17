@@ -11,7 +11,7 @@ object DataLoader extends App {
 
     println("Yay!!")
 
-	val path = "../../../data/anime.csv"
+	val path = "data/anime.csv"
 
 	val df = spark.read.csv(path)
 	df.show()

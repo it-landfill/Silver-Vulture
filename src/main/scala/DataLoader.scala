@@ -1,18 +1,22 @@
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 // https://spark.apache.org/docs/latest/sql-data-sources-csv.html
-// https://stackoverflow.com/questions/73465937/apache-spark-3-3-0-breaks-on-java-17-with-cannot-access-class-sun-nio-ch-direct
 
-object DataLoader extends App {
-	val spark = SparkSession
-        .builder()
-        .appName("Silver-Vulture")
-        .config("spark.master", "local")
-        .getOrCreate()
+object DataLoader {
+    def main(args: Array[String]): Unit = {
+        val spark = SparkSession
+            .builder()
+            .appName("Silver-Vulture")
+            .config("spark.master", "local")
+            .getOrCreate()
 
-    println("Yay!!")
+       val df = loadCSV(spark, path="data/anime.csv", headers = true, null)
+        df.show()
+    }
 
-	val path = "data/anime.csv"
-
-	val df = spark.read.csv(path)
-	df.show()
+    def loadCSV(session: SparkSession, path: String, headers: Boolean, filteredColumns: Array[String]): DataFrame = {
+        session
+            .read
+            .option("header", "true")
+            .csv(path)
+    }
 }

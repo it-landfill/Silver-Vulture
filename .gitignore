@@ -198,7 +198,10 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/scala,visualstudiocode,macos,intellij+all,java,windows
-/data
+/data/*
+!/data/rating_sampler.py
+!/data/rating_sample_5.csv
+!/data/rating_sample_50.csv
 /.bloop
 /.metals
 /project

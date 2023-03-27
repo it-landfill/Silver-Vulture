@@ -65,9 +65,12 @@ class VectorRepresentation(df: DataFrame) {
 
     def loadFromFile(sc:SparkSession): Unit = {
         val context = sc.sparkContext
-        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp"
+        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp\\part-00000"
         print()
-        val tmp: Option[RDD[(Int, Map[Int, Int])]] = Option(context.objectFile(path))
+        val tmp: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path))
+        println(rdd)
+        //rdd = None
+        rdd = tmp
         print()
     }
 

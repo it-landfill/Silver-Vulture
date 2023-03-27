@@ -31,7 +31,8 @@ object Main {
             case Some(userList) => userList.foreach(println)
             case None           => println("No user list")
         }
-
+        vectorRepr.saveToFile(sparkSession:SparkSession)
+        vectorRepr.loadFromFile(sparkSession:SparkSession)
         // Chiude la sessione Spark
         sparkSession.stop()
     }

@@ -5,7 +5,7 @@ class VectorRepresentation(df: DataFrame) {
 
     private var rdd: Option[RDD[(Int, Map[Int, Int])]] = None
     private var animeList: Option[RDD[Int]] = None
-    private var userList: Option[RDD[Int]] = None
+    private var userList: Option[RDD[(Int, Double)]] = None
     parseDF()
     parseAnimeList()
     parseUserList()
@@ -21,7 +21,7 @@ class VectorRepresentation(df: DataFrame) {
 
     def getAnimeList(): Option[RDD[Int]] = animeList
 
-    def getUserList(): Option[RDD[Int]] = userList
+    def getUserList(): Option[RDD[(Int, Double)]] = userList
 
     /** Parse the DataFrame into a RDD
       */
@@ -55,11 +55,11 @@ class VectorRepresentation(df: DataFrame) {
     /** Parse the RDD into a list of user IDs
       */
     private def parseUserList(): Unit = {
-        userList = Some(
+       userList = Some(
           df.rdd
-              .map(row => row.getInt(0)) // Get all the user IDs in the df
-              .distinct() // Remove duplicates
-              .sortBy(x => x) // Sort the values by user ID
-        )
+              .map(row => (row.getInt(0), row.getInt(2))) // Get all the user IDs in the df
+              .groupByKey()
+              .mapValues(values => values.sum.toDouble / values.size.toDouble)
+       )
     }
 }

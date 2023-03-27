@@ -66,13 +66,14 @@ class VectorRepresentation(df: DataFrame) {
     def loadFromFile(sc:SparkSession): Unit = {
         val context = sc.sparkContext
         val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp"
-        val tmp: RDD[(Int, Map[Int, Int])] = context.objectFile(path)
-        rdd = Option(tmp)
-        rdd.foreach(println)
+        print()
+        val tmp: Option[RDD[(Int, Map[Int, Int])]] = Option(context.objectFile(path))
+        print()
     }
 
     def saveToFile(sc:SparkSession): Unit = {
         val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp"
         rdd.foreach(_.saveAsObjectFile(path))
+        print()
     }
 }

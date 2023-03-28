@@ -1,14 +1,11 @@
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class VectorRepresentation(df: DataFrame) {
+class VectorRepresentation() {
 
     private var rdd: Option[RDD[(Int, Map[Int, Int])]] = None
     private var animeList: Option[RDD[Int]] = None
     private var userList: Option[RDD[(Int, Double)]] = None
-    parseDF()
-    parseAnimeList()
-    parseUserList()
 
     def print(): Unit = {
         rdd match {
@@ -25,7 +22,7 @@ class VectorRepresentation(df: DataFrame) {
 
     /** Parse the DataFrame into a RDD
       */
-    private def parseDF(): Unit = {
+    def parseDF(df: DataFrame): Unit = {
         // Transforms the DataFrame into a RDD
         rdd = Some(
           df.rdd
@@ -38,11 +35,13 @@ class VectorRepresentation(df: DataFrame) {
               ) // Convert the list of (user id, rating) for each anime id to a map
               //.sortByKey() // Sort the values by anime ID
         )
+        parseAnimeList(df)
+        parseUserList(df)
     }
 
     /** Parse the RDD into a list of anime IDs
       */
-    private def parseAnimeList(): Unit = {
+    private def parseAnimeList(df: DataFrame): Unit = {
 
         animeList = Some(
           df.rdd
@@ -54,7 +53,7 @@ class VectorRepresentation(df: DataFrame) {
 
     /** Parse the RDD into a list of user IDs
       */
-    private def parseUserList(): Unit = {
+    private def parseUserList(df: DataFrame): Unit = {
        userList = Some(
           df.rdd
               .map(row => (row.getInt(0), row.getInt(2))) // Get all the user IDs in the df
@@ -66,12 +65,11 @@ class VectorRepresentation(df: DataFrame) {
     def loadFromFile(session:SparkSession): Unit = {
         val context = session.sparkContext
         val path ="data/silver_vulture_data_"
-        print()
-        val tmp_rdd: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path+"_rdd\\part-00000"))
+        val tmp_rdd: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path+"rdd\\part-0000*"))
         rdd = tmp_rdd
-        val tmp_animelist: Some[RDD[Int]] = Some(context.objectFile(path+"_animelist\\part-00000"))
+        val tmp_animelist: Some[RDD[Int]] = Some(context.objectFile(path+"animelist\\part-0000*"))
         animeList = tmp_animelist
-        val tmp_userlist: Some[RDD[(Int, Double)]] = Some(context.objectFile(path+"_userlist\\part-00000"))
+        val tmp_userlist: Some[RDD[(Int, Double)]] = Some(context.objectFile(path+"userlist\\part-0000*"))
         userList = tmp_userlist
     }
 

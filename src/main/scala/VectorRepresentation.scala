@@ -36,7 +36,7 @@ class VectorRepresentation(df: DataFrame) {
               .mapValues(
                 _.toMap
               ) // Convert the list of (user id, rating) for each anime id to a map
-              .sortByKey() // Sort the values by anime ID
+              //.sortByKey() // Sort the values by anime ID
         )
     }
 
@@ -48,7 +48,7 @@ class VectorRepresentation(df: DataFrame) {
           df.rdd
               .map(row => row.getInt(1)) // Get all the anime IDs in the df
               .distinct() // Remove duplicates
-              .sortBy(x => x) // Sort the values by anime ID
+              //.sortBy(x => x) // Sort the values by anime ID
         )
     }
 

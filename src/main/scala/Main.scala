@@ -7,13 +7,13 @@ object Main {
         val sparkSession = SparkSession
             .builder()
             .appName("Silver-Vulture")
-            .config("spark.master", "local").config("spark.hadoop.validateOutputSpecs", "false")
+            .config("spark.master", "local").config("spark.hadoop.validateOutputSpecs", "false").config("spark.executor.instances", 6).config("spark.executor.cores", 4)
             .getOrCreate()
 
         // Load DataLoader
         val dataLoader = new DataLoader(sparkSession);
         val rating_complete =
-            dataLoader.loadCSV("data/rating_sample_5.csv", true, null);
+            dataLoader.loadCSV("data/rating_complete.csv", true, null);
         rating_complete.show();
 
         val vectorRepr = new VectorRepresentation(rating_complete);

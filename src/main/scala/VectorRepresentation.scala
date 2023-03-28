@@ -63,20 +63,22 @@ class VectorRepresentation(df: DataFrame) {
        )
     }
 
-    def loadFromFile(sc:SparkSession): Unit = {
-        val context = sc.sparkContext
-        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp\\part-00000"
+    def loadFromFile(session:SparkSession): Unit = {
+        val context = session.sparkContext
+        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp_"
         print()
-        val tmp: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path))
-        println(rdd)
-        //rdd = None
-        rdd = tmp
-        print()
+        val tmp_rdd: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path+"_rdd\\part-00000"))
+        rdd = tmp_rdd
+        val tmp_animelist: Some[RDD[Int]] = Some(context.objectFile(path+"_animelist\\part-00000"))
+        animeList = tmp_animelist
+        val tmp_userlist: Some[RDD[(Int, Double)]] = Some(context.objectFile(path+"_userlist\\part-00000"))
+        userList = tmp_userlist
     }
 
-    def saveToFile(sc:SparkSession): Unit = {
-        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp"
-        rdd.foreach(_.saveAsObjectFile(path))
-        print()
+    def saveToFile(): Unit = {
+        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp_"
+        rdd.foreach(_.saveAsObjectFile(path+"rdd"))
+        animeList.foreach(_.saveAsObjectFile(path+"animelist"))
+        userList.foreach(_.saveAsObjectFile(path+"userlist"))
     }
 }

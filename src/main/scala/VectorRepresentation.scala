@@ -65,7 +65,7 @@ class VectorRepresentation(df: DataFrame) {
 
     def loadFromFile(session:SparkSession): Unit = {
         val context = session.sparkContext
-        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp_"
+        val path ="data/silver_vulture_data_"
         print()
         val tmp_rdd: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path+"_rdd\\part-00000"))
         rdd = tmp_rdd
@@ -76,7 +76,7 @@ class VectorRepresentation(df: DataFrame) {
     }
 
     def saveToFile(): Unit = {
-        val path ="C:\\Users\\loren\\Documents\\Silver-Vulture\\tmp_"
+        val path ="data/silver_vulture_data_"
         rdd.foreach(_.saveAsObjectFile(path+"rdd"))
         animeList.foreach(_.saveAsObjectFile(path+"animelist"))
         userList.foreach(_.saveAsObjectFile(path+"userlist"))

@@ -7,7 +7,7 @@ object Main {
         val sparkSession = SparkSession
             .builder()
             .appName("Silver-Vulture")
-            .config("spark.master", "local")
+            .config("spark.master", "local").config("spark.hadoop.validateOutputSpecs", "false")
             .getOrCreate()
 
         // Load DataLoader

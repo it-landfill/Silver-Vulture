@@ -2,28 +2,22 @@ import org.apache.spark.rdd.RDD
 class Ranking {
 
     def normalizeRDD(VectorRepresentation: VectorRepresentation): Unit = {
-        println("normalizeRDD from Ranking.scala");
-        // From mean score for each user from RDD VectorRepresentation.getUserList() RDD[(Int, Double)], update the RDD VectorRepresentation.getRdd()
-        // with normalized rating values.
-        // From Vector representation (AnimeID, Map(UserID, Rating)) to
-        // Normalized vector representation (AnimeID, Map(UserID, NormalizedRating)
-        val userScores = VectorRepresentation.getUserList().get
-        //val normalizedVectorRepresentation: RDD[(Int, Map[Int, Double])] = VectorRepresentation.getRdd() match {
-            //case Some(rdd) =>
-                // Calculate the new Rating equal to Rating - MeanScore (given RDD VectorRepresentation.getUserList() RDD[(Int, Double)])
-                //rdd.mapValues(
-                //    _.map(x => (x._1, x._2 - userScores.filter(_._1 == x._1).first()._2))
-               // )
-            //case None      => throw new Exception("No data to print")
-       // }
-
-        //.foreach(println)
-    }
-
-    def collaborativeFilteringSimilarity(VectorRepresentation: VectorRepresentation): Unit = {
-        println("collaborativeFilteringSimilarity from Ranking.scala");
-        //
-
+        println(">> normalizeRDD from Ranking.scala");
+        // From mean score for each user from RDD VectorRepresentation.getUserList() RDD[(Int, Double)], update the
+        // RDD VectorRepresentation.getRdd() with normalized rating values.
+        val userMeanScore = VectorRepresentation.getUserList().get
+        println(">> userMeanScore: " + userMeanScore)
+        val userAnimeRatings = VectorRepresentation.getRdd().get
+        println(">> userAnimeRatings: " + userAnimeRatings.collect().mkString(", "))
+        // for each user in userAnimeRatings, update the rating value with the normalized value (rating - meanScore specific for that user)
+        userAnimeRatings.mapValues( (anime) => {
+            println(">> anime: " + anime)
+            anime.mapValues( (rating) => {
+                println(">> rating: " + rating)
+                rating - userMeanScore(rating)
+            })
+        })
+        println(">> userAnimeRatings: " + userAnimeRatings.collect().mkString(", "))
     }
 
 }

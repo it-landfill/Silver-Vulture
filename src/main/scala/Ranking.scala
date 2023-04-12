@@ -1,5 +1,3 @@
-import org.apache.spark.rdd.RDD
-
 import scala.math.{pow, sqrt}
 class Ranking {
 
@@ -29,7 +27,7 @@ class Ranking {
 
         userAnimeRatings.mapValues((anime) => {
             anime.mapValues((rating) => {
-                rating - userMeanScore(rating)
+                rating - userMeanScore(rating) //FIXME: This is a Map, it must not be used in large df (like the user one...)
             })
         })
 
@@ -37,14 +35,12 @@ class Ranking {
           ">> userAnimeRatings normalized: " + ratings.collect().mkString(", ")
         )
 
-        val denominator = ratings.mapValues(animeScores =>
-            sqrt(animeScores.values.map(rating => pow(rating, 2)).sum)
-        )
+        var cart = ratings.cartesian(ratings)
+        cart = cart.filter(pair => pair._1._1 < pair._2._1) // Handle symmetry
 
-        println(">> Denominator: " + denominator.collect().mkString(", "))
-
-        val cart = ratings.cartesian(ratings)
         println(">> Cartesian: " + cart.collect().mkString(", "))
+
+        // Better solution since it does not use an external Map but worse since it re evaluates each time the denominator
 
         val numerator = cart.map(pair =>
             (
@@ -64,7 +60,65 @@ class Ranking {
               )
             )
         )
-        // -4,486666666666667/(3,2218007387174024*1,9096247449870005)
+
+
+        // Better solution since it does not re evaluate the denominator each time but potentially worse since it uses an external Map
+        /*
+        val denominator = ratings
+            .mapValues(animeScores =>
+                sqrt(animeScores.values.map(rating => pow(rating, 2)).sum)
+            )
+            .collectAsMap()
+
+        println(">> Denominator: " + denominator)
+
+        val numerator = cart.map(pair =>
+            (
+                pair._1._1,
+                pair._2._1,
+                pair._1._2
+                    .map(animeScore1 =>
+                        if (pair._2._2.contains(animeScore1._1)) {
+                            animeScore1._2 * pair._2._2(animeScore1._1)
+                        } else {
+                            0
+                        }
+                    )
+                    .sum / (
+                    denominator(pair._1._1) * denominator(pair._2._1)
+                    )
+            )
+        )
+         */
+
+        // THIS WILL NOT WORK since you can not use lookup on a RDD inside a map
+        /*
+        val denominator = ratings
+            .mapValues(animeScores =>
+                sqrt(animeScores.values.map(rating => pow(rating, 2)).sum)
+            )
+
+        println(">> Denominator: " + denominator.collect().mkString(", "))
+
+        val numerator = cart.map(pair =>
+            (
+                pair._1._1,
+                pair._2._1,
+                pair._1._2
+                    .map(animeScore1 =>
+                        if (pair._2._2.contains(animeScore1._1)) {
+                            animeScore1._2 * pair._2._2(animeScore1._1)
+                        } else {
+                            0
+                        }
+                    )
+                    .sum / (
+                    denominator.lookup(pair._1._1).head * denominator.lookup(pair._2._1).head
+                    )
+            )
+        )
+        */
+
         println(">> Numerator: " + numerator.collect().mkString(", "))
     }
 

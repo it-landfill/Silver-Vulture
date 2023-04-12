@@ -202,6 +202,7 @@ $RECYCLE.BIN/
 !/data/rating_sampler.py
 !/data/rating_sample_5.csv
 !/data/rating_sample_50.csv
+!/data/rating_sample_example.csv
 /.bloop
 /.metals
 /project

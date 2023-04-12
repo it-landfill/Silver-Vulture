@@ -15,7 +15,7 @@ object Main {
         // Load DataLoader
         val dataLoader = new DataLoader(sparkSession);
         val rating_complete =
-            dataLoader.loadCSV("data/rating_sample_5.csv", true, null);
+            dataLoader.loadCSV("data/rating_sample_example.csv", true, null);
         rating_complete.show();
 
         val vectorRepr = new VectorRepresentation(rating_complete);

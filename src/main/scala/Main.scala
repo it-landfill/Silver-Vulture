@@ -16,36 +16,31 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        // Load DataLoader
-        val dataLoader = new DataLoader(sparkSession);
-        val rating_complete =
-            dataLoader.loadCSV("data/rating_sample_example.csv", true, null);
-        rating_complete.show();
-
-        val vectorRepr = new VectorRepresentation(rating_complete);
-        //println("Vector Representation: ")
-        // vectorRepr.print()
+        val similarityGenerator = false
+        val similarityEvaluation = true
 
         // TODO: Lorenzo non lasciare garbage code
         val ranking = new Ranking(sparkSession)
-        ranking.normalizeRDD(vectorRepr);
-        ranking.saveToFile();
-        ranking.loadFromFile()
 
-        // println("Anime List: ")
-        /* vectorRepr.getAnimeList() match {
-            case Some(animeList) => animeList.foreach(println)
-            case None            => println("No anime list")
+        if (similarityGenerator) {
+            // Load DataLoader
+            val dataLoader = new DataLoader(sparkSession);
+            val rating_complete =
+                dataLoader.loadCSV("data/rating_complete.csv", true, null);
+            rating_complete.show();
+
+            val vectorRepr = new VectorRepresentation(rating_complete);
+            //println("Vector Representation: ")
+            // vectorRepr.print()
+
+            ranking.normalizeRDD(vectorRepr);
+            ranking.saveToFile();
         }
 
-        println("User List: ")
-        vectorRepr.getUserList() match {
-            case Some(userList) => userList.foreach(println)
-            case None           => println("No user list")
-        } */
-        //vectorRepr.saveToFile()
-        //vectorRepr.loadFromFile(sparkSession:SparkSession)
-        // Chiude la sessione Spark
+        if (similarityEvaluation) {
+            ranking.loadFromFile()
+        }
+
         sparkSession.stop()
     }
 }

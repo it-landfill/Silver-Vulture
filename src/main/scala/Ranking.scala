@@ -1,5 +1,14 @@
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StructField, StructType}
+
 import scala.math.{pow, sqrt}
-class Ranking {
+class Ranking(session: SparkSession) {
+    private val dfSchema = new StructType()
+        .add(StructField("Name", IntegerType, false))
+        .add(StructField("Job", IntegerType, false))
+        .add(StructField("Age", DoubleType, false))
+
+    private var similarityDF:Option[DataFrame] = None
 
     def normalizeRDD(VectorRepresentation: VectorRepresentation): Unit = {
         println(">> normalizeRDD from Ranking.scala");
@@ -56,7 +65,24 @@ class Ranking {
             )
         )
 
-        // println(">> Numerator: " + numerator.collect().mkString(", "))
+        similarityDF = Some(session.createDataFrame(numerator).toDF("AnimeID1", "AnimeID2", "Similarity"))
+    }
+
+    def loadFromFile(): Unit = {
+        val path = "data/silver_vulture_data_df"
+        //similarityRDD = Some(context.objectFile(path + "_rdd\\part-00000"))
+        val df = session.read.format("csv").option("header", value = true).load(path)
+        df.show()
+    }
+
+    def saveToFile(): Unit = {
+        val path = "data/silver_vulture_data_df"
+        similarityDF match {
+            case Some(_) =>
+                similarityDF.get.show()
+                similarityDF.get.write.mode(SaveMode.Overwrite).format("csv").option("header", value = true).save(path)
+            case None => println("No data to save")
+        }
     }
 
 }

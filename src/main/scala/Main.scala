@@ -19,7 +19,7 @@ object Main {
         // Load DataLoader
         val dataLoader = new DataLoader(sparkSession);
         val rating_complete =
-            dataLoader.loadCSV("data/rating_complete.csv", true, null);
+            dataLoader.loadCSV("data/rating_sample_example.csv", true, null);
         rating_complete.show();
 
         val vectorRepr = new VectorRepresentation(rating_complete);
@@ -27,8 +27,10 @@ object Main {
         // vectorRepr.print()
 
         // TODO: Lorenzo non lasciare garbage code
-        val ranking = new Ranking();
+        val ranking = new Ranking(sparkSession)
         ranking.normalizeRDD(vectorRepr);
+        ranking.saveToFile();
+        ranking.loadFromFile()
 
         // println("Anime List: ")
         /* vectorRepr.getAnimeList() match {

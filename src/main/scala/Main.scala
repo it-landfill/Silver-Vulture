@@ -6,7 +6,11 @@ object Main {
         val sparkSession = SparkSession
             .builder()
             .appName("Silver-Vulture")
-            .config("spark.master", "local").config("spark.hadoop.validateOutputSpecs", "false").config("spark.executor.instances", 6).config("spark.executor.cores", 4)
+            .config("spark.master", "local[4]")
+            .config("spark.deploy.mode", "cluster")
+            .config("spark.driver.memory", "6G")
+            .config("spark.hadoop.validateOutputSpecs", "false")
+            .config("spark.executor.memory", "6G")
             .getOrCreate()
 
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
@@ -15,7 +19,7 @@ object Main {
         // Load DataLoader
         val dataLoader = new DataLoader(sparkSession);
         val rating_complete =
-            dataLoader.loadCSV("data/rating_sample_example.csv", true, null);
+            dataLoader.loadCSV("data/rating_complete.csv", true, null);
         rating_complete.show();
 
         val vectorRepr = new VectorRepresentation(rating_complete);

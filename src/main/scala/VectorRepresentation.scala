@@ -30,7 +30,7 @@ class VectorRepresentation(df: DataFrame) {
         rdd = Some(
           df.rdd
               .map(row =>
-                  (row.getInt(1), (row.getInt(0), row.getInt(2)))
+                  (row.getString(1).toInt, (row.getString(0).toInt, row.getString(2).toInt))
               ) // Convert the df to a list of (anime id, (user id, rating))
               .groupByKey() // Group by anime id
               .mapValues(
@@ -57,7 +57,7 @@ class VectorRepresentation(df: DataFrame) {
     private def parseUserList(): Unit = {
        userList = Some(
            df.rdd
-           .map(row => (row.getInt(0), row.getInt(2))) // Get all the user IDs in the df
+           .map(row => (row.getString(0).toInt, row.getString(2).toInt)) // Get all the user IDs in the df
            .groupByKey()
            .mapValues(values => values.sum.toDouble / values.size.toDouble)
            .collectAsMap()

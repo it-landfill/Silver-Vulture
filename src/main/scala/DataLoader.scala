@@ -7,7 +7,7 @@ class DataLoader(session: SparkSession) {
         headers: Boolean,
         filteredColumns: Array[String]
     ): DataFrame = {
-        val df = session.read.format("csv").option("header", "true").load(path)
+        val df = session.read.format("csv").option("header", headers).load(path)
         if (filteredColumns != null) {
             df.select(filteredColumns.head, filteredColumns.tail: _*)
         } else {

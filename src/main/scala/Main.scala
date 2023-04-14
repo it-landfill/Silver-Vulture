@@ -6,40 +6,41 @@ object Main {
         val sparkSession = SparkSession
             .builder()
             .appName("Silver-Vulture")
-            .config("spark.master", "local").config("spark.hadoop.validateOutputSpecs", "false").config("spark.executor.instances", 6).config("spark.executor.cores", 4)
+            .config("spark.master", "local[4]")
+            .config("spark.deploy.mode", "cluster")
+            .config("spark.driver.memory", "6G")
+            .config("spark.hadoop.validateOutputSpecs", "false")
+            .config("spark.executor.memory", "6G")
             .getOrCreate()
 
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
-        sparkSession.sparkContext.setLogLevel("ERROR");
+        sparkSession.sparkContext.setLogLevel("WARN");
 
-        // Load DataLoader
-        val dataLoader = new DataLoader(sparkSession);
-        val rating_complete =
-            dataLoader.loadCSV("data/rating_sample_5.csv", true, null);
-        rating_complete.show();
-
-        val vectorRepr = new VectorRepresentation(rating_complete);
-        println("Vector Representation: ")
-        vectorRepr.print()
+        val similarityGenerator = false
+        val similarityEvaluation = true
 
         // TODO: Lorenzo non lasciare garbage code
-        val ranking = new Ranking();
-        ranking.normalizeRDD(vectorRepr);
+        val ranking = new Ranking(sparkSession)
 
-        println("Anime List: ")
-        vectorRepr.getAnimeList() match {
-            case Some(animeList) => animeList.foreach(println)
-            case None            => println("No anime list")
+        if (similarityGenerator) {
+            // Load DataLoader
+            val dataLoader = new DataLoader(sparkSession);
+            val rating_complete =
+                dataLoader.loadCSV("data/rating_complete.csv", true, null);
+            rating_complete.show();
+
+            val vectorRepr = new VectorRepresentation(rating_complete);
+            //println("Vector Representation: ")
+            // vectorRepr.print()
+
+            ranking.normalizeRDD(vectorRepr);
+            ranking.saveToFile();
         }
 
-        println("User List: ")
-        vectorRepr.getUserList() match {
-            case Some(userList) => userList.foreach(println)
-            case None           => println("No user list")
+        if (similarityEvaluation) {
+            ranking.loadFromFile()
         }
-        vectorRepr.saveToFile()
-        vectorRepr.loadFromFile(sparkSession:SparkSession)
-        // Chiude la sessione Spark
+
         sparkSession.stop()
     }
 }

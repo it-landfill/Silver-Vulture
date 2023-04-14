@@ -1,12 +1,13 @@
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
-import org.apache.spark.sql.types.{DoubleType, IntegerType, StructField, StructType}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.types.{FloatType, IntegerType, StructField, StructType}
 
 import scala.math.{pow, sqrt}
 class Ranking(session: SparkSession) {
     private val dfSchema = new StructType()
-        .add(StructField("Name", IntegerType, false))
-        .add(StructField("Job", IntegerType, false))
-        .add(StructField("Age", DoubleType, false))
+        .add(StructField("AnimeID1", IntegerType, nullable = false))
+        .add(StructField("AnimeID2", IntegerType, nullable = false))
+        .add(StructField("Similarity", FloatType, nullable = false))
 
     private var similarityDF:Option[DataFrame] = None
 
@@ -47,11 +48,11 @@ class Ranking(session: SparkSession) {
 
         // println(">> Denominator: " + denominator)
 
-        val numerator = cart.map(pair =>
-            (
+        val numerator: RDD[Row] = cart.map(pair =>
+            Row(
               pair._1._1,
               pair._2._1,
-              pair._1._2
+              (pair._1._2
                   .map(animeScore1 =>
                       if (pair._2._2.contains(animeScore1._1)) {
                           animeScore1._2 * pair._2._2(animeScore1._1)
@@ -61,18 +62,23 @@ class Ranking(session: SparkSession) {
                   )
                   .sum / (
                 denominator(pair._1._1) * denominator(pair._2._1)
-              )
+              )).toFloat
             )
         )
 
-        similarityDF = Some(session.createDataFrame(numerator).toDF("AnimeID1", "AnimeID2", "Similarity"))
+        similarityDF = Some(session.createDataFrame(numerator, dfSchema))
+        println("Generated similarity DF:")
+        similarityDF.get.printSchema()
+        similarityDF.get.show()
     }
 
     def loadFromFile(): Unit = {
         val path = "data/silver_vulture_data_df"
-        //similarityRDD = Some(context.objectFile(path + "_rdd\\part-00000"))
-        val df = session.read.format("csv").option("header", value = true).load(path)
+        val df = session.read.format("csv").option("header", value = true).schema(dfSchema).load(path)
+        println("Loaded similarity DF:")
+        df.printSchema()
         df.show()
+        similarityDF = Some(df)
     }
 
     def saveToFile(): Unit = {

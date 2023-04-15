@@ -1,5 +1,6 @@
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.functions.desc
 import org.apache.spark.sql.types.{FloatType, IntegerType, StructField, StructType}
 
 import scala.math.{pow, sqrt}
@@ -10,6 +11,16 @@ class Ranking(session: SparkSession) {
         .add(StructField("Similarity", FloatType, nullable = false))
 
     private var similarityDF:Option[DataFrame] = None
+
+    def topNItem(idItem: Int, maxN: Int = 5, threshold: Float = 0.5f): DataFrame = {
+        println(">> topNItem from Ranking.scala");
+        val topN = similarityDF.get
+            .filter(anime => (anime.getInt(0) == idItem ||  anime.getInt(1) == idItem) && anime.getFloat(2) >= threshold)
+            .sort(desc("Similarity"))
+            .limit(maxN)
+            .drop("AnimeID1")
+        topN
+    }
 
     def normalizeRDD(VectorRepresentation: VectorRepresentation): Unit = {
         println(">> normalizeRDD from Ranking.scala");

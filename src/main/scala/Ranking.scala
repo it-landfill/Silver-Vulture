@@ -1,8 +1,12 @@
-/*
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
-import org.apache.spark.sql.functions.{abs, desc}
-import org.apache.spark.sql.types.{FloatType, IntegerType, StructField, StructType}
+import org.apache.spark.sql.functions.{abs, col, desc}
+import org.apache.spark.sql.types.{
+    FloatType,
+    IntegerType,
+    StructField,
+    StructType
+}
 
 import scala.math.{pow, sqrt}
 
@@ -10,23 +14,31 @@ import scala.math.{pow, sqrt}
 
 class Ranking(session: SparkSession) {
     private val dfSchema = new StructType()
-        .add(StructField("AnimeID1", IntegerType, nullable = false))
-        .add(StructField("AnimeID2", IntegerType, nullable = false))
-        .add(StructField("Similarity", FloatType, nullable = false))
+        .add(StructField("anime_id_1", IntegerType, nullable = false))
+        .add(StructField("anime_id_2", IntegerType, nullable = false))
+        .add(StructField("similarity", FloatType, nullable = false))
 
-    private var similarityDF:Option[DataFrame] = None
+    private var similarityDF: Option[DataFrame] = None
 
     private var vectorRepresentation: VectorRepresentation = _
 
-    def topNItem(idItem: Int, maxN: Int = 5, threshold: Float = 0.5f): DataFrame = {
+    def topNItem(
+        idItem: Int,
+        maxN: Int = 5,
+        enableThreshold: Boolean = false,
+        threshold: Float = 0.5f
+    ): DataFrame = {
+
         val topN = similarityDF.get
-            .filter(anime => (anime.getInt(0) == idItem ||  anime.getInt(1) == idItem) && anime.getFloat(2) >= threshold)
-            .sort(desc("Similarity"))
+            .filter(anime =>
+                (anime.getInt(0) == idItem || anime.getInt(1) == idItem)
+                    && (!enableThreshold || anime.getFloat(2) >= threshold))
+            .sort(desc("similarity"))
             .limit(maxN)
-            .drop("AnimeID1")
         topN
     }
 
+    /*
     def prediction(user: Int, anime: Int): Float = {
         println(">> prediction from Ranking.scala");
         val averageUserScore = vectorRepresentation
@@ -55,73 +67,87 @@ class Ranking(session: SparkSession) {
         (averageUserScore + (numerator.sum / denominator)).toFloat
     }
 
+     */
+
     def normalizeRDD(vectorRepresentationExt: VectorRepresentation): Unit = {
-        println(">> normalizeRDD from Ranking.scala");
         // From mean score for each user from RDD VectorRepresentation.getUserList() RDD[(Int, Double)], update the
         // RDD VectorRepresentation.getRdd() with normalized rating values.
         val userMeanScore =
-            vectorRepresentationExt
-                .getUserList()
-                .get // TODO: Gestire caso in cui sia None
+            vectorRepresentationExt.getUserList
 
         val userAnimeRatings =
-            vectorRepresentationExt
-                .getRdd()
-                .get // TODO: Gestire caso in cui sia None
+            vectorRepresentationExt.getMainDF
 
         // TODO: Optimize this
         vectorRepresentation = vectorRepresentationExt
 
-        // for each user in userAnimeRatings, update the rating value with the normalized value (rating - meanScore specific for that user)
-        val ratings = userAnimeRatings.mapValues(animeScores =>
-            animeScores.map(evaluation =>
-                evaluation._1 -> (evaluation._2 - userMeanScore(
-                  evaluation._1
-                )) // FIXME: This is a Map, it must not be used in large df (like the user one...)
+        import session.implicits._
+        val denom = vectorRepresentation.getMainDF
+            .select("anime_id", "normalized_rating")
+            .map(row => (row.getInt(0), pow(row.getFloat(1), 2)))
+            .groupBy("_1")
+            .sum("_2")
+            .map(row => (row.getInt(0), sqrt(row.getDouble(1))))
+            .toDF("anime_id", "denominator")
+            .withColumn("denominator", col("denominator").cast(FloatType))
+
+        val usrLst = vectorRepresentation.getMainDF
+            .select("user_id", "anime_id", "normalized_rating")
+
+        val numer = usrLst
+            .as("anime_1")
+            .join(
+              usrLst.as("anime_2"),
+              col("anime_1.user_id") === col("anime_2.user_id"),
+              "inner"
             )
-        )
-
-        val cart = ratings
-            .cartesian(ratings)
-            .filter(pair => pair._1._1 < pair._2._1) // Handle symmetry
-
-        // Better solution since it does not re evaluate the denominator each time but potentially worse since it uses an external Map
-
-        val denominator = ratings
-            .mapValues(animeScores =>
-                sqrt(animeScores.values.map(rating => pow(rating, 2)).sum)
+            .filter(row => row.getInt(1) < row.getInt(4))
+            .map(row =>
+                (
+                  row.getInt(0),
+                  row.getInt(1),
+                  row.getInt(4),
+                  row.getFloat(2) * row.getFloat(5)
+                )
             )
-            .collectAsMap()
-
-        // println(">> Denominator: " + denominator)
-
-        val numerator: RDD[Row] = cart.map(pair =>
-            Row(
-              pair._1._1,
-              pair._2._1,
-              (pair._1._2
-                  .map(animeScore1 =>
-                      if (pair._2._2.contains(animeScore1._1)) {
-                          animeScore1._2 * pair._2._2(animeScore1._1)
-                      } else {
-                          0
-                      }
-                  )
-                  .sum / (
-                denominator(pair._1._1) * denominator(pair._2._1)
-              )).toFloat
+            .select(
+              col("_2").as("anime_1_id"),
+              col("_3").as("anime_2_id"),
+              col("_4").as("norm_rating")
             )
-        )
+            .groupBy("anime_1_id", "anime_2_id")
+            .sum("norm_rating")
+            .withColumnRenamed("sum(norm_rating)", "numerator")
+            .withColumn("numerator", col("numerator").cast(FloatType))
 
-        similarityDF = Some(session.createDataFrame(numerator, dfSchema))
+        val aniMatrix = numer
+            .join(denom, col("anime_1_id") === col("anime_id"), "inner")
+            .drop("anime_id")
+            .join(denom, col("anime_2_id") === col("anime_id"), "inner")
+            .drop("anime_id")
+            .map(row =>
+                (
+                  row.getInt(0),
+                  row.getInt(1),
+                  row.getFloat(2) / (row.getFloat(3) * row.getFloat(4))
+                )
+            )
+            .toDF("anime_1_id", "anime_2_id", "similarity")
+
+        similarityDF = Some(aniMatrix)
         println("Generated similarity DF:")
         similarityDF.get.printSchema()
         similarityDF.get.show()
+
     }
 
     def loadFromFile(): Unit = {
         val path = "data/silver_vulture_data_df"
-        val df = session.read.format("csv").option("header", value = true).schema(dfSchema).load(path)
+        val df = session.read
+            .format("csv")
+            .option("header", value = true)
+            .schema(dfSchema)
+            .load(path)
         println("Loaded similarity DF:")
         df.printSchema()
         df.show()
@@ -133,11 +159,13 @@ class Ranking(session: SparkSession) {
         similarityDF match {
             case Some(_) =>
                 similarityDF.get.show()
-                similarityDF.get.write.mode(SaveMode.Overwrite).format("csv").option("header", value = true).save(path)
+                similarityDF.get.write
+                    .mode(SaveMode.Overwrite)
+                    .format("csv")
+                    .option("header", value = true)
+                    .save(path)
             case None => println("No data to save")
         }
     }
 
 }
-
- */

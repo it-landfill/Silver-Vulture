@@ -21,7 +21,7 @@ object Main {
         val similarityEvaluation = false
 
         // TODO: Lorenzo non lasciare garbage code
-        //val ranking = new Ranking(sparkSession)
+        val ranking = new Ranking(sparkSession)
 
         if (similarityGenerator) {
             // Load DataLoader
@@ -29,21 +29,19 @@ object Main {
 
 
             val mainSchema = new StructType()
-                .add(StructField("UserID", IntegerType, nullable = false))
-                .add(StructField("AnimeID", IntegerType, nullable = false))
-                .add(StructField("Rating", IntegerType, nullable = false))
+                .add(StructField("user_id", IntegerType, nullable = false))
+                .add(StructField("anime_id", IntegerType, nullable = false))
+                .add(StructField("rating", IntegerType, nullable = false))
 
-            val rating_complete =
-                dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
-
-            rating_complete.show();
+            val rating_complete = dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
 
             val vectorRepr = new VectorRepresentation()
             vectorRepr.parseDF(rating_complete, sparkSession)
             //println("Vector Representation: ")
             // vectorRepr.print()
 
-            //ranking.normalizeRDD(vectorRepr);
+            ranking.normalizeRDD(vectorRepr)
+            ranking.topNItem(3, enableThreshold = false).show()
             //ranking.saveToFile();
         }
 

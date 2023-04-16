@@ -10,9 +10,21 @@ class VectorRepresentation() {
     private var mainDF: Option[DataFrame] = None
     private var userList: Option[DataFrame] = None
 
-    def getMainDF(): DataFrame = mainDF.get
+    /**
+     * Returns a DataFrame with the following columns:<br>
+     * - user_id: Int<br>
+     * - anime_id: Int<br>
+     * - rating: Int<br>
+     * - normalized_rating: Float
+     * */
+    def getMainDF: DataFrame = mainDF.get // TODO: Gestire caso in cui sia None
 
-    def getUserList(): DataFrame = userList.get
+    /**
+     * Returns a DataFrame with the following columns:<br>
+     * - user_id: Int<br>
+     * - average_rating: Float
+     */
+    def getUserList: DataFrame = userList.get // TODO: Gestire caso in cui sia None
 
     /*
     def loadFromFile(session: SparkSession): Unit = {
@@ -44,18 +56,18 @@ class VectorRepresentation() {
 
         userList = Some(
           df
-              .select("UserID", "Rating")
-              .groupBy("UserID")
-              .avg("Rating")
-              .withColumnRenamed("avg(Rating)", "AverageRating")
-              .withColumn("AverageRating", col("AverageRating").cast(FloatType))
+              .select("user_id", "rating")
+              .groupBy("user_id")
+              .avg("rating")
+              .withColumnRenamed("avg(rating)", "average_rating")
+              .withColumn("average_rating", col("average_rating").cast(FloatType))
         )
 
         import sparkSession.implicits._
         mainDF = Some(df
             .join(
               userList.get,
-              df("UserID") === userList.get("UserID"),
+              df("user_id") === userList.get("user_id"),
               "inner"
             )
             .map(row =>
@@ -66,6 +78,6 @@ class VectorRepresentation() {
                   row.getInt(2) - row.getFloat(4)
                 )
             )
-            .toDF("UserID", "AnimeID", "Rating", "NormalizedRating"))
+            .toDF("user_id", "anime_id", "rating", "normalized_rating"))
     }
 }

@@ -1,6 +1,5 @@
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types.{FloatType, StructType, IntegerType, StructField}
 
 // https://data-flair.training/blogs/apache-spark-rdd-vs-dataframe-vs-dataset/

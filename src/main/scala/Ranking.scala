@@ -1,6 +1,5 @@
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
-import org.apache.spark.sql.functions.{abs, col, desc}
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions.{col, desc}
 import org.apache.spark.sql.types.{
     FloatType,
     IntegerType,

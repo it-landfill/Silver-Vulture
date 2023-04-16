@@ -29,8 +29,6 @@ class Ranking(
     private var similarityDF: Option[DataFrame] = None
 
     def prediction(user: Int, anime: Int): Float = {
-        println(">> prediction from Ranking.scala")
-
         val topN = topNItem(anime, 2)
 
         val averageUserScore = vectorRepresentation.getUserList

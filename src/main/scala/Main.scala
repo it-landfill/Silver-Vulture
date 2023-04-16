@@ -28,28 +28,41 @@ object Main {
             // Load DataLoader
             val dataLoader = new DataLoader(sparkSession);
 
-
             val mainSchema = new StructType()
                 .add(StructField("user_id", IntegerType, nullable = false))
                 .add(StructField("anime_id", IntegerType, nullable = false))
                 .add(StructField("rating", IntegerType, nullable = false))
 
-            val rating_complete = dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
+            val rating_complete =
+                dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
 
             vectorRepr.parseDF(rating_complete, sparkSession)
-            //println("Vector Representation: ")
+            // println("Vector Representation: ")
             // vectorRepr.print()
 
             ranking.normalizeRDD()
-            //ranking.saveToFile();
+            // ranking.saveToFile();
         }
 
         if (similarityEvaluation) {
-            //ranking.loadFromFile()
-            //ranking.topNItem(2, enableThreshold = false).show()
-            println(ranking.prediction(1, 1))
+            // ranking.loadFromFile()
+            // ranking.topNItem(2, enableThreshold = false).show()
+            //println(ranking.prediction(1, 1))
+
+            val a: Array[Float] = new Array[Float](6)
+            for (i <- 1 to 6) {
+                for (j <- 0 to 5) {
+                    a(j) = ranking.prediction(i, j + 1)
+                }
+                println(a.mkString("(", "\t", ")"))
+            }
+
         }
 
+        if (sys.env.contains("localenv")) {
+            println("Press enter to close")
+            System.in.read
+        }
         sparkSession.stop()
     }
 }

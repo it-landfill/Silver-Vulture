@@ -17,7 +17,7 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        val similarityGenerator = false
+        val similarityGenerator = true
         val similarityEvaluation = false
 
         val vectorRepr = new VectorRepresentation(sparkSession)
@@ -29,7 +29,7 @@ object Main {
                 .add(StructField("anime_id", IntegerType, nullable = false))
                 .add(StructField("rating", IntegerType, nullable = false))
 
-            val rating_complete = DataLoader.loadCSV(sparkSession, "data/rating_sample_example.csv", mainSchema)
+            val rating_complete = DataLoader.loadCSV(sparkSession, "data/rating_complete.csv", mainSchema)
 
             vectorRepr.parseDF(rating_complete)
             vectorRepr.show()

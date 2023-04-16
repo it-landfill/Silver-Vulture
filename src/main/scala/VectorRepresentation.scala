@@ -1,85 +1,71 @@
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.FloatType
 
-class VectorRepresentation(df: DataFrame) {
+// https://data-flair.training/blogs/apache-spark-rdd-vs-dataframe-vs-dataset/
 
-    private var rdd: Option[RDD[(Int, Map[Int, Int])]] = None
-    private var animeList: Option[RDD[Int]] = None
-    private var userList: Option[collection.Map[Int, Double]] = None
-    parseDF()
-    parseAnimeList()
-    parseUserList()
+class VectorRepresentation() {
 
-    def print(): Unit = {
-        rdd match {
-            case Some(rdd) => rdd.foreach(println)
-            case None      => println("No data to print")
-        }
-    }
+    private var mainDF: Option[DataFrame] = None
+    private var userList: Option[DataFrame] = None
 
-    def getRdd(): Option[RDD[(Int, Map[Int, Int])]] = rdd
+    def getMainDF(): DataFrame = mainDF.get
 
-    def getAnimeList(): Option[RDD[Int]] = animeList
+    def getUserList(): DataFrame = userList.get
 
-    def getUserList(): Option[collection.Map[Int, Double]] = userList
-
-    /** Parse the DataFrame into a RDD
-      */
-    private def parseDF(): Unit = {
-        // Transforms the DataFrame into a RDD
-        rdd = Some(
-          df.rdd
-              .map(row =>
-                  (row.getString(1).toInt, (row.getString(0).toInt, row.getString(2).toInt))
-              ) // Convert the df to a list of (anime id, (user id, rating))
-              .groupByKey() // Group by anime id
-              .mapValues(
-                _.toMap
-              ) // Convert the list of (user id, rating) for each anime id to a map
-              //.sortByKey() // Sort the values by anime ID
-        )
-    }
-
-    /** Parse the RDD into a list of anime IDs
-      */
-    private def parseAnimeList(): Unit = {
-
-        animeList = Some(
-          df.rdd
-              .map(row => row.getInt(1)) // Get all the anime IDs in the df
-              .distinct() // Remove duplicates
-              //.sortBy(x => x) // Sort the values by anime ID
-        )
-    }
-
-    /** Parse the RDD into a list of user IDs
-      */
-    private def parseUserList(): Unit = {
-       userList = Some(
-           df.rdd
-           .map(row => (row.getString(0).toInt, row.getString(2).toInt)) // Get all the user IDs in the df
-           .groupByKey()
-           .mapValues(values => values.sum.toDouble / values.size.toDouble)
-           .collectAsMap()
-       )
-    }
-
-    def loadFromFile(session:SparkSession): Unit = {
+    /*
+    def loadFromFile(session: SparkSession): Unit = {
         val context = session.sparkContext
-        val path ="data/silver_vulture_data_"
+        val path = "data/silver_vulture_data_"
         print()
-        val tmp_rdd: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path+"_rdd\\part-00000"))
+        val tmp_rdd: Some[RDD[(Int, Int, Float)]] = Some(
+          context.objectFile(path + "_rdd\\part-00000")
+        )
         rdd = tmp_rdd
-        val tmp_animelist: Some[RDD[Int]] = Some(context.objectFile(path+"_animelist\\part-00000"))
-        animeList = tmp_animelist
-        //val tmp_userlist: Some[collection.Map[Int, Double]] = Some(context.objectFile(path+"_userlist\\part-00000"))
-        //userList = tmp_userlist
+        // val tmp_animelist: Some[RDD[Int]] = Some(context.objectFile(path+"_animelist\\part-00000"))
+        // animeList = tmp_animelist
+        // val tmp_userlist: Some[collection.Map[Int, Double]] = Some(context.objectFile(path+"_userlist\\part-00000"))
+        // userList = tmp_userlist
     }
 
     def saveToFile(): Unit = {
-        val path ="data/silver_vulture_data_"
-        rdd.foreach(_.saveAsObjectFile(path+"rdd"))
-        animeList.foreach(_.saveAsObjectFile(path+"animelist"))
-        //userList.foreach(_.saveAsObjectFile(path+"userlist"))
+        val path = "data/silver_vulture_data_"
+        rdd.foreach(_.saveAsObjectFile(path + "rdd"))
+        // animeList.foreach(_.saveAsObjectFile(path+"animelist"))
+        // userList.foreach(_.saveAsObjectFile(path+"userlist"))
+    }
+     */
+
+    /** Parse the DataFrame into a RDD
+      */
+    def parseDF(df: DataFrame, sparkSession: SparkSession): Unit = {
+        // Transforms the DataFrame into a RDD
+
+        userList = Some(
+          df
+              .select("UserID", "Rating")
+              .groupBy("UserID")
+              .avg("Rating")
+              .withColumnRenamed("avg(Rating)", "AverageRating")
+              .withColumn("AverageRating", col("AverageRating").cast(FloatType))
+        )
+
+        import sparkSession.implicits._
+        mainDF = Some(df
+            .join(
+              userList.get,
+              df("UserID") === userList.get("UserID"),
+              "inner"
+            )
+            .map(row =>
+                (
+                  row.getInt(0),
+                  row.getInt(1),
+                  row.getInt(2),
+                  row.getInt(2) - row.getFloat(4)
+                )
+            )
+            .toDF("UserID", "AnimeID", "Rating", "NormalizedRating"))
     }
 }

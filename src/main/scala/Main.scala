@@ -1,4 +1,5 @@
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 object Main {
     def main(args: Array[String]) = {
@@ -16,29 +17,38 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        val similarityGenerator = false
-        val similarityEvaluation = true
+        val similarityGenerator = true
+        val similarityEvaluation = false
 
         // TODO: Lorenzo non lasciare garbage code
-        val ranking = new Ranking(sparkSession)
+        //val ranking = new Ranking(sparkSession)
 
         if (similarityGenerator) {
             // Load DataLoader
             val dataLoader = new DataLoader(sparkSession);
+
+
+            val mainSchema = new StructType()
+                .add(StructField("UserID", IntegerType, nullable = false))
+                .add(StructField("AnimeID", IntegerType, nullable = false))
+                .add(StructField("Rating", IntegerType, nullable = false))
+
             val rating_complete =
-                dataLoader.loadCSV("data/rating_complete.csv", true, null);
+                dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
+
             rating_complete.show();
 
-            val vectorRepr = new VectorRepresentation(rating_complete);
+            val vectorRepr = new VectorRepresentation()
+            vectorRepr.parseDF(rating_complete, sparkSession)
             //println("Vector Representation: ")
             // vectorRepr.print()
 
-            ranking.normalizeRDD(vectorRepr);
-            ranking.saveToFile();
+            //ranking.normalizeRDD(vectorRepr);
+            //ranking.saveToFile();
         }
 
         if (similarityEvaluation) {
-            ranking.loadFromFile()
+            //ranking.loadFromFile()
         }
 
         sparkSession.stop()

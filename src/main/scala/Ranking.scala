@@ -1,9 +1,12 @@
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
-import org.apache.spark.sql.functions.desc
+import org.apache.spark.sql.functions.{abs, desc}
 import org.apache.spark.sql.types.{FloatType, IntegerType, StructField, StructType}
 
 import scala.math.{pow, sqrt}
+
+// Documentation: http://files.grouplens.org/papers/www10_sarwar.pdf
+
 class Ranking(session: SparkSession) {
     private val dfSchema = new StructType()
         .add(StructField("AnimeID1", IntegerType, nullable = false))
@@ -12,8 +15,9 @@ class Ranking(session: SparkSession) {
 
     private var similarityDF:Option[DataFrame] = None
 
+    private var vectorRepresentation: VectorRepresentation = _
+
     def topNItem(idItem: Int, maxN: Int = 5, threshold: Float = 0.5f): DataFrame = {
-        println(">> topNItem from Ranking.scala");
         val topN = similarityDF.get
             .filter(anime => (anime.getInt(0) == idItem ||  anime.getInt(1) == idItem) && anime.getFloat(2) >= threshold)
             .sort(desc("Similarity"))
@@ -22,19 +26,50 @@ class Ranking(session: SparkSession) {
         topN
     }
 
-    def normalizeRDD(VectorRepresentation: VectorRepresentation): Unit = {
+    def prediction(user: Int, anime: Int): Float = {
+        println(">> prediction from Ranking.scala");
+        val averageUserScore = vectorRepresentation
+            .getUserList()
+            .get(user)
+
+        val topN = topNItem(anime, 2, -10f)
+            .rdd
+            .map(row => (row.getInt(0), row.getFloat(1)))
+            .collectAsMap()
+
+        val numerator = vectorRepresentation
+            .getRdd()
+            .get
+            .filter(animeScore => animeScore._2.contains(user) && topN.contains(animeScore._1))
+            .map(animeScore => (animeScore._2(user) - averageUserScore) * topN(animeScore._1))
+
+        val denominator = topN.values.map(elem => elem.abs).sum
+        // val denominator = topN.values.sum
+
+        // println(">> Average user score: " + averageUserScore)
+        // println(">> Numerator: " + numerator.sum)
+
+        // println(">> Denominator: " + denominator)
+
+        (averageUserScore + (numerator.sum / denominator)).toFloat
+    }
+
+    def normalizeRDD(vectorRepresentationExt: VectorRepresentation): Unit = {
         println(">> normalizeRDD from Ranking.scala");
         // From mean score for each user from RDD VectorRepresentation.getUserList() RDD[(Int, Double)], update the
         // RDD VectorRepresentation.getRdd() with normalized rating values.
         val userMeanScore =
-            VectorRepresentation
+            vectorRepresentationExt
                 .getUserList()
                 .get // TODO: Gestire caso in cui sia None
 
         val userAnimeRatings =
-            VectorRepresentation
+            vectorRepresentationExt
                 .getRdd()
                 .get // TODO: Gestire caso in cui sia None
+
+        // TODO: Optimize this
+        vectorRepresentation = vectorRepresentationExt
 
         // for each user in userAnimeRatings, update the rating value with the normalized value (rating - meanScore specific for that user)
         val ratings = userAnimeRatings.mapValues(animeScores =>

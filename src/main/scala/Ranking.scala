@@ -12,47 +12,66 @@ import scala.math.{pow, sqrt}
 
 // Documentation: http://files.grouplens.org/papers/www10_sarwar.pdf
 
-class Ranking(session: SparkSession) {
+class Ranking(
+    session: SparkSession,
+    vectorRepresentation: VectorRepresentation
+) {
     private val dfSchema = new StructType()
         .add(StructField("anime_id_1", IntegerType, nullable = false))
         .add(StructField("anime_id_2", IntegerType, nullable = false))
         .add(StructField("similarity", FloatType, nullable = false))
 
+    /** DataFrame with the following columns:<br>
+      *   - anime_1_id: Int<br>
+      *   - anime_2_id: Int<br>
+      *   - similarity: Float
+      */
     private var similarityDF: Option[DataFrame] = None
 
-    private var vectorRepresentation: VectorRepresentation = _
-
-    def topNItem(
-        idItem: Int,
-        maxN: Int = 5,
-        enableThreshold: Boolean = false,
-        threshold: Float = 0.5f
-    ): DataFrame = {
-
-        val topN = similarityDF.get
-            .filter(anime =>
-                (anime.getInt(0) == idItem || anime.getInt(1) == idItem)
-                    && (!enableThreshold || anime.getFloat(2) >= threshold))
-            .sort(desc("similarity"))
-            .limit(maxN)
-        topN
-    }
-
-    /*
     def prediction(user: Int, anime: Int): Float = {
-        println(">> prediction from Ranking.scala");
-        val averageUserScore = vectorRepresentation
-            .getUserList()
-            .get(user)
+        println(">> prediction from Ranking.scala")
 
-        val topN = topNItem(anime, 2, -10f)
-            .rdd
-            .map(row => (row.getInt(0), row.getFloat(1)))
-            .collectAsMap()
+        val topN = topNItem(anime, 2)
 
+        val averageUserScore = vectorRepresentation.getUserList
+            .filter(row => row.getInt(0) == user)
+            .head()
+            .getFloat(1)
+
+        import session.implicits._
+
+        val numerator = vectorRepresentation.getMainDF
+            .filter(row => row.getInt(0) == user)
+            .as("mainDF")
+            .join(
+              topN.as("topN"),
+              col("mainDF.anime_id") === col("topN.anime_id"),
+              "inner"
+            )
+            .map(row =>
+                (
+                  0,
+                  row.getFloat(5) * row.getFloat(3)
+                )
+            )
+            .groupBy("_1")
+            .sum("_2")
+            .withColumn("sum(_2)", col("sum(_2)").cast(FloatType))
+            .head()
+            .getFloat(1)
+
+        val denominator = topN
+            .map(row => (0, row.getFloat(1).abs))
+            .groupBy("_1")
+            .sum("_2")
+            .withColumn("sum(_2)", col("sum(_2)").cast(FloatType))
+            .head()
+            .getFloat(1)
+
+        (averageUserScore + (numerator / denominator))
+        /*
         val numerator = vectorRepresentation
-            .getRdd()
-            .get
+            .getMainDF
             .filter(animeScore => animeScore._2.contains(user) && topN.contains(animeScore._1))
             .map(animeScore => (animeScore._2(user) - averageUserScore) * topN(animeScore._1))
 
@@ -65,21 +84,43 @@ class Ranking(session: SparkSession) {
         // println(">> Denominator: " + denominator)
 
         (averageUserScore + (numerator.sum / denominator)).toFloat
+
+         */
+
     }
 
-     */
+    /** Returns a DataFrame with the following columns:<br>
+      *   - anime_id: Int<br>
+      *   - similarity: Float
+      */
+    def topNItem(
+        idItem: Int,
+        maxN: Int = 5,
+        enableThreshold: Boolean = false,
+        threshold: Float = 0.5f
+    ): DataFrame = {
+        import session.implicits._
+        val topN = similarityDF.get
+            .filter(anime =>
+                (anime.getInt(0) == idItem || anime.getInt(1) == idItem)
+                    && (!enableThreshold || anime.getFloat(2) >= threshold)
+            )
+            .sort(desc("similarity"))
+            .limit(maxN)
+            .map(row =>
+                (
+                  if (row.getInt(0) == idItem) row.getInt(1)
+                  else row.getInt(0),
+                  row.getFloat(2)
+                )
+            )
+            .toDF("anime_id", "similarity")
+        topN
+    }
 
-    def normalizeRDD(vectorRepresentationExt: VectorRepresentation): Unit = {
+    def normalizeRDD(): Unit = {
         // From mean score for each user from RDD VectorRepresentation.getUserList() RDD[(Int, Double)], update the
         // RDD VectorRepresentation.getRdd() with normalized rating values.
-        val userMeanScore =
-            vectorRepresentationExt.getUserList
-
-        val userAnimeRatings =
-            vectorRepresentationExt.getMainDF
-
-        // TODO: Optimize this
-        vectorRepresentation = vectorRepresentationExt
 
         import session.implicits._
         val denom = vectorRepresentation.getMainDF
@@ -135,9 +176,9 @@ class Ranking(session: SparkSession) {
             .toDF("anime_1_id", "anime_2_id", "similarity")
 
         similarityDF = Some(aniMatrix)
-        println("Generated similarity DF:")
-        similarityDF.get.printSchema()
-        similarityDF.get.show()
+        // println("Generated similarity DF:")
+        // similarityDF.get.printSchema()
+        // similarityDF.get.show()
 
     }
 

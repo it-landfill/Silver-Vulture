@@ -18,10 +18,11 @@ object Main {
         sparkSession.sparkContext.setLogLevel("WARN");
 
         val similarityGenerator = true
-        val similarityEvaluation = false
+        val similarityEvaluation = true
 
         // TODO: Lorenzo non lasciare garbage code
-        val ranking = new Ranking(sparkSession)
+        val vectorRepr = new VectorRepresentation()
+        val ranking = new Ranking(sparkSession, vectorRepr)
 
         if (similarityGenerator) {
             // Load DataLoader
@@ -35,18 +36,18 @@ object Main {
 
             val rating_complete = dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
 
-            val vectorRepr = new VectorRepresentation()
             vectorRepr.parseDF(rating_complete, sparkSession)
             //println("Vector Representation: ")
             // vectorRepr.print()
 
-            ranking.normalizeRDD(vectorRepr)
-            ranking.topNItem(3, enableThreshold = false).show()
+            ranking.normalizeRDD()
             //ranking.saveToFile();
         }
 
         if (similarityEvaluation) {
             //ranking.loadFromFile()
+            //ranking.topNItem(2, enableThreshold = false).show()
+            println(ranking.prediction(1, 1))
         }
 
         sparkSession.stop()

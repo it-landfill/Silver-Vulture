@@ -16,10 +16,6 @@ class Ranking(
     session: SparkSession,
     vectorRepresentation: VectorRepresentation
 ) {
-    private val dfSchema = new StructType()
-        .add(StructField("anime_id_1", IntegerType, nullable = false))
-        .add(StructField("anime_id_2", IntegerType, nullable = false))
-        .add(StructField("similarity", FloatType, nullable = false))
 
     /** DataFrame with the following columns:<br>
       *   - anime_1_id: Int<br>
@@ -66,25 +62,7 @@ class Ranking(
             .head()
             .getFloat(1)
 
-        (averageUserScore + (numerator / denominator))
-        /*
-        val numerator = vectorRepresentation
-            .getMainDF
-            .filter(animeScore => animeScore._2.contains(user) && topN.contains(animeScore._1))
-            .map(animeScore => (animeScore._2(user) - averageUserScore) * topN(animeScore._1))
-
-        val denominator = topN.values.map(elem => elem.abs).sum
-        // val denominator = topN.values.sum
-
-        // println(">> Average user score: " + averageUserScore)
-        // println(">> Numerator: " + numerator.sum)
-
-        // println(">> Denominator: " + denominator)
-
-        (averageUserScore + (numerator.sum / denominator)).toFloat
-
-         */
-
+        averageUserScore + (numerator / denominator)
     }
 
     /** Returns a DataFrame with the following columns:<br>
@@ -174,36 +152,33 @@ class Ranking(
             .toDF("anime_1_id", "anime_2_id", "similarity")
 
         similarityDF = Some(aniMatrix)
-        // println("Generated similarity DF:")
-        // similarityDF.get.printSchema()
-        // similarityDF.get.show()
-
     }
 
-    def loadFromFile(): Unit = {
-        val path = "data/silver_vulture_data_df"
-        val df = session.read
-            .format("csv")
-            .option("header", value = true)
-            .schema(dfSchema)
-            .load(path)
-        println("Loaded similarity DF:")
-        df.printSchema()
-        df.show()
-        similarityDF = Some(df)
+    def load(): Unit = {
+        val path = "data/silver_vulture_data_"
+
+        val similaritySchema = new StructType()
+            .add(StructField("anime_id_1", IntegerType, nullable = false))
+            .add(StructField("anime_id_2", IntegerType, nullable = false))
+            .add(StructField("similarity", FloatType, nullable = false))
+
+        similarityDF = Some(
+          DataLoader.loadCSV(session, path + "similarity", similaritySchema)
+        )
     }
 
-    def saveToFile(): Unit = {
-        val path = "data/silver_vulture_data_df"
+    def save(): Unit = {
+        val path = "data/silver_vulture_data_"
+        DataLoader.saveCSV(similarityDF, path + "similarity")
+    }
+
+    def show(): Unit = {
+        println("Similarity DF")
         similarityDF match {
-            case Some(_) =>
-                similarityDF.get.show()
-                similarityDF.get.write
-                    .mode(SaveMode.Overwrite)
-                    .format("csv")
-                    .option("header", value = true)
-                    .save(path)
-            case None => println("No data to save")
+            case Some(df) =>
+                df.printSchema()
+                df.show()
+            case None => println("similarity DF not defined")
         }
     }
 

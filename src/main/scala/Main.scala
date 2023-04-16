@@ -17,38 +17,38 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        val similarityGenerator = true
-        val similarityEvaluation = true
+        val similarityGenerator = false
+        val similarityEvaluation = false
 
-        // TODO: Lorenzo non lasciare garbage code
-        val vectorRepr = new VectorRepresentation()
+        val vectorRepr = new VectorRepresentation(sparkSession)
         val ranking = new Ranking(sparkSession, vectorRepr)
 
         if (similarityGenerator) {
-            // Load DataLoader
-            val dataLoader = new DataLoader(sparkSession);
-
             val mainSchema = new StructType()
                 .add(StructField("user_id", IntegerType, nullable = false))
                 .add(StructField("anime_id", IntegerType, nullable = false))
                 .add(StructField("rating", IntegerType, nullable = false))
 
-            val rating_complete =
-                dataLoader.loadCSV("data/rating_sample_example.csv", mainSchema)
+            val rating_complete = DataLoader.loadCSV(sparkSession, "data/rating_sample_example.csv", mainSchema)
 
-            vectorRepr.parseDF(rating_complete, sparkSession)
-            // println("Vector Representation: ")
-            // vectorRepr.print()
+            vectorRepr.parseDF(rating_complete)
+            vectorRepr.show()
+            vectorRepr.save()
 
             ranking.normalizeRDD()
-            // ranking.saveToFile();
+            ranking.show()
+            ranking.save()
+        } else {
+            vectorRepr.load()
+            vectorRepr.show()
+            ranking.load()
+            ranking.show()
         }
 
         if (similarityEvaluation) {
-            // ranking.loadFromFile()
-            // ranking.topNItem(2, enableThreshold = false).show()
+            //ranking.topNItem(2, enableThreshold = false).show()
             //println(ranking.prediction(1, 1))
-
+            /*
             val a: Array[Float] = new Array[Float](6)
             for (i <- 1 to 6) {
                 for (j <- 0 to 5) {
@@ -56,6 +56,8 @@ object Main {
                 }
                 println(a.mkString("(", "\t", ")"))
             }
+
+             */
 
         }
 

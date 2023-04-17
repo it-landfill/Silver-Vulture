@@ -1,4 +1,5 @@
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 object Main {
     def main(args: Array[String]) = {
@@ -19,28 +20,49 @@ object Main {
         val similarityGenerator = false
         val similarityEvaluation = true
 
-        // TODO: Lorenzo non lasciare garbage code
-        val ranking = new Ranking(sparkSession)
+        val vectorRepr = new VectorRepresentation(sparkSession)
+        val ranking = new Ranking(sparkSession, vectorRepr)
 
         if (similarityGenerator) {
-            // Load DataLoader
-            val dataLoader = new DataLoader(sparkSession);
-            val rating_complete =
-                dataLoader.loadCSV("data/rating_complete.csv", true, null);
-            rating_complete.show();
+            val mainSchema = new StructType()
+                .add(StructField("user_id", IntegerType, nullable = false))
+                .add(StructField("anime_id", IntegerType, nullable = false))
+                .add(StructField("rating", IntegerType, nullable = false))
 
-            val vectorRepr = new VectorRepresentation(rating_complete);
-            //println("Vector Representation: ")
-            // vectorRepr.print()
+            val rating_complete = DataLoader.loadCSV(sparkSession, "data/rating_complete.csv", mainSchema)
 
-            ranking.normalizeRDD(vectorRepr);
-            ranking.saveToFile();
+            vectorRepr.parseDF(rating_complete)
+            vectorRepr.save()
+
+            ranking.normalizeRDD()
+            ranking.save()
+        } else {
+            vectorRepr.load()
+            vectorRepr.show()
+            ranking.load()
+            ranking.show()
         }
 
         if (similarityEvaluation) {
-            ranking.loadFromFile()
+            ranking.topNItem(5114, 50, enableThreshold = false).show()
+            //println(ranking.prediction(1, 1))
+            /*
+            val a: Array[Float] = new Array[Float](6)
+            for (i <- 1 to 6) {
+                for (j <- 0 to 5) {
+                    a(j) = ranking.prediction(i, j + 1)
+                }
+                println(a.mkString("(", "\t", ")"))
+            }
+
+             */
+
         }
 
+        if (sys.env.contains("localenv")) {
+            println("Press enter to close")
+            System.in.read
+        }
         sparkSession.stop()
     }
 }

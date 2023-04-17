@@ -1,85 +1,102 @@
-import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.{FloatType, StructType, IntegerType, StructField}
 
-class VectorRepresentation(df: DataFrame) {
+// https://data-flair.training/blogs/apache-spark-rdd-vs-dataframe-vs-dataset/
 
-    private var rdd: Option[RDD[(Int, Map[Int, Int])]] = None
-    private var animeList: Option[RDD[Int]] = None
-    private var userList: Option[collection.Map[Int, Double]] = None
-    parseDF()
-    parseAnimeList()
-    parseUserList()
+class VectorRepresentation(sparkSession: SparkSession) {
 
-    def print(): Unit = {
-        rdd match {
-            case Some(rdd) => rdd.foreach(println)
-            case None      => println("No data to print")
-        }
-    }
+    private var mainDF: Option[DataFrame] = None
+    private var userDF: Option[DataFrame] = None
 
-    def getRdd(): Option[RDD[(Int, Map[Int, Int])]] = rdd
+    /** Returns a DataFrame with the following columns:<br>
+      *   - user_id: Int<br>
+      *   - anime_id: Int<br>
+      *   - rating: Int<br>
+      *   - normalized_rating: Float
+      */
+    def getMainDF: DataFrame = mainDF.get // TODO: Gestire caso in cui sia None
 
-    def getAnimeList(): Option[RDD[Int]] = animeList
-
-    def getUserList(): Option[collection.Map[Int, Double]] = userList
+    /** Returns a DataFrame with the following columns:<br>
+      *   - user_id: Int<br>
+      *   - average_rating: Float
+      */
+    def getUserList: DataFrame =
+        userDF.get // TODO: Gestire caso in cui sia None
 
     /** Parse the DataFrame into a RDD
       */
-    private def parseDF(): Unit = {
-        // Transforms the DataFrame into a RDD
-        rdd = Some(
-          df.rdd
+    def parseDF(df: DataFrame): Unit = {
+
+        userDF = Some(
+          df
+              .select("user_id", "rating")
+              .groupBy("user_id")
+              .avg("rating")
+              .withColumnRenamed("avg(rating)", "average_rating")
+              .withColumn(
+                "average_rating",
+                col("average_rating").cast(FloatType)
+              )
+        )
+
+        import sparkSession.implicits._
+        mainDF = Some(
+          df
+              .join(
+                  userDF.get,
+                df("user_id") === userDF.get("user_id"),
+                "inner"
+              )
               .map(row =>
-                  (row.getString(1).toInt, (row.getString(0).toInt, row.getString(2).toInt))
-              ) // Convert the df to a list of (anime id, (user id, rating))
-              .groupByKey() // Group by anime id
-              .mapValues(
-                _.toMap
-              ) // Convert the list of (user id, rating) for each anime id to a map
-              //.sortByKey() // Sort the values by anime ID
+                  (
+                    row.getInt(0),
+                    row.getInt(1),
+                    row.getInt(2),
+                    row.getInt(2) - row.getFloat(4)
+                  )
+              )
+              .toDF("user_id", "anime_id", "rating", "normalized_rating")
         )
     }
 
-    /** Parse the RDD into a list of anime IDs
-      */
-    private def parseAnimeList(): Unit = {
+        def show(): Unit = {
+            println("Main DF")
+            mainDF match {
+                case Some(df) =>
+                    df.printSchema()
+                    df.show()
+                case None => println("Main DF not defined")
+            }
 
-        animeList = Some(
-          df.rdd
-              .map(row => row.getInt(1)) // Get all the anime IDs in the df
-              .distinct() // Remove duplicates
-              //.sortBy(x => x) // Sort the values by anime ID
-        )
-    }
+            println("User DF")
+            userDF match {
+                case Some(df) =>
+                    df.printSchema()
+                    df.show()
+                case None => println("User DF not defined")
+            }
+        }
 
-    /** Parse the RDD into a list of user IDs
-      */
-    private def parseUserList(): Unit = {
-       userList = Some(
-           df.rdd
-           .map(row => (row.getString(0).toInt, row.getString(2).toInt)) // Get all the user IDs in the df
-           .groupByKey()
-           .mapValues(values => values.sum.toDouble / values.size.toDouble)
-           .collectAsMap()
-       )
-    }
+    def load(): Unit = {
+        val path = "data/silver_vulture_data_"
 
-    def loadFromFile(session:SparkSession): Unit = {
-        val context = session.sparkContext
-        val path ="data/silver_vulture_data_"
-        print()
-        val tmp_rdd: Some[RDD[(Int, Map[Int, Int])]] = Some(context.objectFile(path+"_rdd\\part-00000"))
-        rdd = tmp_rdd
-        val tmp_animelist: Some[RDD[Int]] = Some(context.objectFile(path+"_animelist\\part-00000"))
-        animeList = tmp_animelist
-        //val tmp_userlist: Some[collection.Map[Int, Double]] = Some(context.objectFile(path+"_userlist\\part-00000"))
-        //userList = tmp_userlist
-    }
+        val mainSchema = new StructType()
+            .add(StructField("user_id", IntegerType, nullable = false))
+            .add(StructField("anime_id", IntegerType, nullable = false))
+            .add(StructField("rating", IntegerType, nullable = false))
+            .add(StructField("normalized_rating", FloatType, nullable = false))
 
-    def saveToFile(): Unit = {
-        val path ="data/silver_vulture_data_"
-        rdd.foreach(_.saveAsObjectFile(path+"rdd"))
-        animeList.foreach(_.saveAsObjectFile(path+"animelist"))
-        //userList.foreach(_.saveAsObjectFile(path+"userlist"))
+        val userSchema = new StructType()
+            .add(StructField("user_id", IntegerType, nullable = false))
+            .add(StructField("average_rating", FloatType, nullable = false))
+
+        mainDF = Some(DataLoader.loadCSV(sparkSession, path+"mainDF", mainSchema))
+        userDF = Some(DataLoader.loadCSV(sparkSession, path+"userDF", userSchema))
     }
+        def save(): Unit = {
+            val path = "data/silver_vulture_data_"
+            DataLoader.saveCSV(mainDF, path+"mainDF")
+            DataLoader.saveCSV(userDF, path+"userDF")
+        }
 }

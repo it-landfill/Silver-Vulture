@@ -17,8 +17,8 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        val similarityGenerator = true
-        val similarityEvaluation = false
+        val similarityGenerator = false
+        val similarityEvaluation = true
 
         val vectorRepr = new VectorRepresentation(sparkSession)
         val ranking = new Ranking(sparkSession, vectorRepr)
@@ -32,11 +32,9 @@ object Main {
             val rating_complete = DataLoader.loadCSV(sparkSession, "data/rating_complete.csv", mainSchema)
 
             vectorRepr.parseDF(rating_complete)
-            vectorRepr.show()
             vectorRepr.save()
 
             ranking.normalizeRDD()
-            ranking.show()
             ranking.save()
         } else {
             vectorRepr.load()
@@ -46,7 +44,7 @@ object Main {
         }
 
         if (similarityEvaluation) {
-            //ranking.topNItem(2, enableThreshold = false).show()
+            ranking.topNItem(5114, 50, enableThreshold = false).show()
             //println(ranking.prediction(1, 1))
             /*
             val a: Array[Float] = new Array[Float](6)

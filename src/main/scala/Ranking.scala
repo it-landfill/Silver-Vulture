@@ -79,6 +79,7 @@ class Ranking(
             .filter(anime =>
                 (anime.getInt(0) == idItem || anime.getInt(1) == idItem)
                     && (!enableThreshold || anime.getFloat(2) >= threshold)
+                && !anime.getFloat(2).isNaN //TODO: Tell me why!
             )
             .sort(desc("similarity"))
             .limit(maxN)
@@ -157,8 +158,8 @@ class Ranking(
         val path = "data/silver_vulture_data_"
 
         val similaritySchema = new StructType()
-            .add(StructField("anime_id_1", IntegerType, nullable = false))
-            .add(StructField("anime_id_2", IntegerType, nullable = false))
+            .add(StructField("anime_1_id", IntegerType, nullable = false))
+            .add(StructField("anime_2_id", IntegerType, nullable = false))
             .add(StructField("similarity", FloatType, nullable = false))
 
         similarityDF = Some(

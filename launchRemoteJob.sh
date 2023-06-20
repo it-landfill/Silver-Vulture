@@ -8,7 +8,7 @@ sbt package
 echo Uploading the jar to the bucket
 BUCKET_NAME="silver-vulture-data"
 
-JAR_PATH=../target/scala-2.12/
+JAR_PATH=./target/scala-2.12/
 JAR_NAME=Silver-Vulture.jar
 
 gsutil -m cp -R $JAR_PATH$JAR_NAME gs://$BUCKET_NAME/

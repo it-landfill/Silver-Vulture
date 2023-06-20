@@ -29,7 +29,7 @@ object Main {
                 .add(StructField("anime_id", IntegerType, nullable = false))
                 .add(StructField("rating", IntegerType, nullable = false))
 
-            val rating_complete =  DataLoader.loadCSV(sparkSession, if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/" + "data/rating_complete_new.csv", mainSchema)
+            val rating_complete =  DataLoader.loadCSV(sparkSession, (if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/") + "data/rating_complete_new.csv", mainSchema)
 
             vectorRepr.parseDF(rating_complete)
             vectorRepr.save()

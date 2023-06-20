@@ -10,6 +10,7 @@ object DataLoader {
         headers: Boolean = true,
         filteredColumns: Array[String] = null
     ): DataFrame = {
+		println("Loading " + path)
         val df = session.read.format("csv").option("header", headers).schema(schema).load(path)
         if (filteredColumns != null) {
             df.select(filteredColumns.head, filteredColumns.tail: _*)

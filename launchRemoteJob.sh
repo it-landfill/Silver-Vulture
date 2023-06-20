@@ -3,6 +3,7 @@
 echo Starting the script....
 
 echo Compiling the project
+rm -r ./target
 sbt package
 
 echo Uploading the jar to the bucket

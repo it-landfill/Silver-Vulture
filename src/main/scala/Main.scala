@@ -7,18 +7,18 @@ object Main {
         val sparkSession = SparkSession
             .builder()
             .appName("Silver-Vulture")
-            .config("spark.master", "local[4]")
-            .config("spark.deploy.mode", "cluster")
-            .config("spark.driver.memory", "6G")
+            .config("spark.master", "local[*]")
+            //.config("spark.deploy.mode", "cluster")
             .config("spark.hadoop.validateOutputSpecs", "false")
-            .config("spark.executor.memory", "6G")
+            //.config("spark.executor.memory", "6G")
+            //.config("spark.driver.memory", "6G")
             .getOrCreate()
 
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        val similarityGenerator = false
-        val similarityEvaluation = true
+        val similarityGenerator = true
+        val similarityEvaluation = false
 
         val vectorRepr = new VectorRepresentation(sparkSession)
         val ranking = new Ranking(sparkSession, vectorRepr)
@@ -29,7 +29,7 @@ object Main {
                 .add(StructField("anime_id", IntegerType, nullable = false))
                 .add(StructField("rating", IntegerType, nullable = false))
 
-            val rating_complete = DataLoader.loadCSV(sparkSession, "data/rating_complete.csv", mainSchema)
+            val rating_complete =  DataLoader.loadCSV(sparkSession, if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/" + "data/rating_complete_new.csv", mainSchema)
 
             vectorRepr.parseDF(rating_complete)
             vectorRepr.save()

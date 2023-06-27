@@ -9,3 +9,6 @@ lazy val root = (project in file("."))
   .settings(
     name := "Silver-Vulture"
   )
+
+artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
+"Silver-Vulture.jar" }

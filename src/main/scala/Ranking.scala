@@ -155,7 +155,7 @@ class Ranking(
     }
 
     def load(): Unit = {
-        val path = "data/silver_vulture_data_"
+        val path =( if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/") + "data/silver_vulture_data_"
 
         val similaritySchema = new StructType()
             .add(StructField("anime_1_id", IntegerType, nullable = false))
@@ -168,7 +168,7 @@ class Ranking(
     }
 
     def save(): Unit = {
-        val path = "data/silver_vulture_data_"
+        val path =( if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/") + "data/silver_vulture_data_"
         DataLoader.saveCSV(similarityDF, path + "similarity")
     }
 

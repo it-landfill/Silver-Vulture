@@ -213,3 +213,4 @@ $RECYCLE.BIN/
 /metastore_db
 /.bsp
 /.idea
+/scripts/target

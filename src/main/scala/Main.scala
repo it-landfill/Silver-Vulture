@@ -37,6 +37,9 @@ object Main {
 
             ranking.normalizeRDD()
             ranking.save()
+
+
+
         } else {
             vectorRepr.load()
             vectorRepr.show()

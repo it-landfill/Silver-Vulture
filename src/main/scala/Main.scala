@@ -23,6 +23,7 @@ object Main {
 
         val vectorRepr = new VectorRepresentation(sparkSession)
         val ranking = new Ranking(sparkSession, vectorRepr)
+        val predictor = new Prediction(sparkSession, vectorRepr, ranking)
 
         if (similarityGenerator) {
             val mainSchema = new StructType()
@@ -50,10 +51,13 @@ object Main {
         if (similarityEvaluation) {
 			println("Similarity evaluation")
 
-			val finalJoin = ranking.getUnifiedDataFrame
+            predictor.predict(1)
 
-			println("finalJoin")
-			finalJoin.show()
+			//val finalJoin = ranking.getUnifiedDataFrame
+
+			//println("finalJoin")
+			//finalJoin.show()
+
 
 			
 

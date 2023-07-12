@@ -1,7 +1,7 @@
-import org.apache.spark.sql.functions.{col, desc, slice, struct, when}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions.{col, slice, struct}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-import java.sql.Struct
+import scala.collection.mutable
 
 class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentation, ranking: Ranking) {
   def predict(user_id: Int): Unit = {
@@ -58,18 +58,18 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
       .groupBy("value", "anime_1_id", "anime_2_id")
       .mean()
       .drop("avg(value)", "avg(user_id)", "avg(average_rating)",
-      "avg(anime_1_id)", "avg(anime_1_rating)", "avg(anime_1_normalized_rating)", "avg(anime_2_id)",
-      "avg(anime_2_rating)", "avg(anime_2_normalized_rating)")
+        "avg(anime_1_id)", "avg(anime_1_rating)", "avg(anime_1_normalized_rating)", "avg(anime_2_id)",
+        "avg(anime_2_rating)", "avg(anime_2_normalized_rating)")
       .map(row => (
         row.getInt(0),
         if (row.getInt(0) == row.getInt(1)) row.getInt(2)
         else row.getInt(1),
         row.getDouble(3)
       ))
-      .toDF("anime_1_id","anime_2_id", "similarity")
+      .toDF("anime_1_id", "anime_2_id", "similarity")
       .as("DF1")
       .join(main_df.as("DF2"), col("DF2.user_id") === user_id && col("DF1.anime_2_id") === col("DF2.anime_id"), "leftouter")
-      .drop("user_id","anime_id","rating")
+      .drop("user_id", "anime_id", "rating")
       .na.fill(0)
       .sort(col("anime_1_id"), col("similarity").desc)
       .groupBy(col("anime_1_id"))
@@ -92,25 +92,29 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
     ajeje.show()
 */
 
-    topN.foreach(row => {
-      var num = 0
-      var den = 0
-      val topK = row.getList(1)
-      for ((id,sim, rating) <- topK) {
-        println(id)
-        println(sim)
-        println(rating)
-
-        if (rating != 0) {
-          num += rating*sim
-        }
-
+    val predictions = topN.map((row: Row) => {
+      import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+      var num = 0.0
+      var den = 0.0
+      val topK = row.getAs[mutable.WrappedArray[GenericRowWithSchema]](1)
+      topK.foreach(el => {
+        val sim = el.getDouble(1).toFloat
+        val rating = el.getFloat(2)
+        if (rating != 0) num += sim * rating
         den += sim
-      }
+      })
 
-      println("Score for anime " + row.getInt(0) + " is " + num/den)
-    })
+      (
+        row.getInt(0),
+        (num / den) + avg_user_rating
+      )
+    }
+    )
+      .toDF("anime_id", "predicted_score")
+      .orderBy("predicted_score")
+      .limit(10)
+      .filter(row => row.getDouble(1) >= 6)
 
-
+    predictions
   }
 }

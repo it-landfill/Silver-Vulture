@@ -51,28 +51,7 @@ object Main {
         if (similarityEvaluation) {
 			println("Similarity evaluation")
 
-            predictor.predict(1)
-
-			//val finalJoin = ranking.getUnifiedDataFrame
-
-			//println("finalJoin")
-			//finalJoin.show()
-
-
-			
-
-            //ranking.topNItem(5114, 50, enableThreshold = false).show()
-            //println(ranking.prediction(1, 1))
-            /*
-            val a: Array[Float] = new Array[Float](6)
-            for (i <- 1 to 6) {
-                for (j <- 0 to 5) {
-                    a(j) = ranking.prediction(i, j + 1)
-                }
-                println(a.mkString("(", "\t", ")"))
-            }
-
-             */
+            predictor.predict(4)
 
         }
 

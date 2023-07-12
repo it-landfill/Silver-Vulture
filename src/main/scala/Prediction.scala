@@ -4,7 +4,7 @@ import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import scala.collection.mutable
 
 class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentation, ranking: Ranking) {
-  def predict(user_id: Int): Unit = {
+  def predict(user_id: Int): DataFrame = {
     /*
     Given an userid, the function returns an anime that might be of interest
 
@@ -46,6 +46,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
 
     val unified_df = ranking.getUnifiedDataFrame.filter(row => row.getInt(0) != user_id)
     val main_df = vectorRepresentation.getMainDF
+    val avg_user_rating = vectorRepresentation.getUserList.filter(row => row.getInt(0) == user_id).first().getFloat(1)
 
     import org.apache.spark.sql.functions.collect_list
 
@@ -75,22 +76,6 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
       .groupBy(col("anime_1_id"))
       .agg(slice(collect_list(struct(col("anime_2_id"), col("similarity"), col("normalized_rating"))), 1, 5).alias("topK"))
 
-    topN.printSchema()
-    topN.show()
-    /*
-    val ajeje = unified_df
-      .drop("similarity")
-      .as("DF1")
-      .join(topN.as("DF2"), col("DF1.anime_1_id") === col("DF2.anime_1_id"), "inner")
-      .drop(topN("anime_1_id"))
-      .withColumnRenamed("topK", "anime_1_topK")
-      .as("DF1")
-      .join(topN.as("DF2"), col("DF1.anime_2_id") === col("DF2.anime_1_id"), "inner")
-      .drop(topN("anime_1_id"))
-      .withColumnRenamed("topK", "anime_2_topK")
-    // We have TopK parallel for all unseen anime!
-    ajeje.show()
-*/
 
     val predictions = topN.map((row: Row) => {
       import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema

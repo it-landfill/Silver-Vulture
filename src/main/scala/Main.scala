@@ -18,7 +18,7 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-        val similarityGenerator = false
+        val similarityGenerator = true
         val similarityEvaluation = true
 
         val vectorRepr = new VectorRepresentation(sparkSession)
@@ -55,7 +55,7 @@ object Main {
 
         }
 
-        if (sys.env.contains("localenv") && sys.env.get("localenv").get != "nostop") {
+        if (sys.env.contains("localenv") && sys.env("localenv") != "nostop") {
             println("Press enter to close")
             System.in.read
         }

@@ -51,7 +51,7 @@ object Main {
         if (similarityEvaluation) {
 			println("Similarity evaluation")
 
-            predictor.predict(4)
+            predictor.predict(4).show()
 
         }
 

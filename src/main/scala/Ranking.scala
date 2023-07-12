@@ -23,95 +23,14 @@ class Ranking(
       */
     private var similarityDF: Option[DataFrame] = None
 
-	def getSimilarityDF: DataFrame = similarityDF.get //TODO: Gestire caso in cui sia None
-
-    def prediction(user: Int, anime: Int): Float = {
-        val topN = topNItem(anime, 2)
-
-        val averageUserScore = vectorRepresentation.getUserList
-            .filter(row => row.getInt(0) == user)
-            .head()
-            .getFloat(1)
-
-        import session.implicits._
-
-        val numerator = vectorRepresentation.getMainDF
-            .filter(row => row.getInt(0) == user)
-            .as("mainDF")
-            .join(
-              topN.as("topN"),
-              col("mainDF.anime_id") === col("topN.anime_id"),
-              "inner"
-            )
-            .map(row =>
-                (
-                  0,
-                  row.getFloat(5) * row.getFloat(3)
-                )
-            )
-            .groupBy("_1")
-            .sum("_2")
-            .withColumn("sum(_2)", col("sum(_2)").cast(FloatType))
-            .head()
-            .getFloat(1)
-
-        val denominator = topN
-            .map(row => (0, row.getFloat(1).abs))
-            .groupBy("_1")
-            .sum("_2")
-            .withColumn("sum(_2)", col("sum(_2)").cast(FloatType))
-            .head()
-            .getFloat(1)
-
-        averageUserScore + (numerator / denominator)
-    }
-
-	/** Return a dataframe that unifies all 3 other dataframes
-	  *
-	  */
-	def getUnifiedDataFrame: DataFrame = {
-		val main = vectorRepresentation
-				.getMainDF
-		val user = vectorRepresentation.getUserList
-
-		val sim = similarityDF.get
-
-		val tmpJoin = user
-			.join(
-				main,
-				user("user_id") === main("user_id"),
-				"inner"
-			)
-			.drop(main("user_id"))
-
-		val finalJoin = tmpJoin
-			.as("tmpJoin")
-			.join(
-				tmpJoin.as("join2"),
-				col("tmpJoin.user_id") === col("join2.user_id") && col("tmpJoin.anime_id") < col("join2.anime_id"),
-				"inner"
-			)
-			.select(
-				col("tmpJoin.user_id"),
-				col("tmpJoin.average_rating"),
-				col("tmpJoin.anime_id").as("anime_1_id"),
-				col("tmpJoin.rating").as("anime_1_rating"),
-				col("tmpJoin.normalized_rating").as("anime_1_normalized_rating"),
-				col("join2.anime_id").as("anime_2_id"),
-				col("join2.rating").as("anime_2_rating"),
-				col("join2.normalized_rating").as("anime_2_normalized_rating")
-			)
-			.as("tmpJoin")
-			.join(
-				sim,
-				col("tmpJoin.anime_1_id") === sim("anime_1_id") && col("tmpJoin.anime_2_id") === sim("anime_2_id"),
-				"inner"
-			)
-			.drop(sim("anime_1_id"))
-			.drop(sim("anime_2_id"))
-		
-		return finalJoin
-	}
+  /** Returns a DataFrame with the following columns:<br>
+    *   - anime_1_id: Int<br>
+    *   - anime_2_id: Int<br>
+    *   - similarity: Float
+    */
+  def getSimilarityDF: DataFrame = {
+    similarityDF.get
+  }
 
     /** Returns a DataFrame with the following columns:<br>
       *   - anime_id: Int<br>

@@ -44,7 +44,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
       .except(anime_with_score)
 
 
-    val unified_df = ranking.getUnifiedDataFrame.filter(row => row.getInt(0) != user_id)
+    val similarityDF = ranking.getSimilarityDF
     val main_df = vectorRepresentation.getMainDF
     val avg_user_rating = vectorRepresentation.getUserList.filter(row => row.getInt(0) == user_id).first().getFloat(1)
 
@@ -53,14 +53,12 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
     val topN = anime_to_eval
       .as("DF1")
       .join(
-        unified_df.as("DF2"),
+        similarityDF.as("DF2"),
         col("DF1.value") === col("DF2.anime_1_id") || col("DF1.value") === col("DF2.anime_2_id"),
         "inner")
       .groupBy("value", "anime_1_id", "anime_2_id")
       .mean()
-      .drop("avg(value)", "avg(user_id)", "avg(average_rating)",
-        "avg(anime_1_id)", "avg(anime_1_rating)", "avg(anime_1_normalized_rating)", "avg(anime_2_id)",
-        "avg(anime_2_rating)", "avg(anime_2_normalized_rating)")
+      .drop("avg(value)", "avg(anime_1_id)", "avg(anime_2_id)")
       .map(row => (
         row.getInt(0),
         if (row.getInt(0) == row.getInt(1)) row.getInt(2)

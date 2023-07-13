@@ -8,6 +8,9 @@ object Main {
 	 * - args(1): booleano che indica se rigenerare i file di ranking e vector representation (default: false)
 	 * - args(2): booleano che indica se eseguire l'evaluation (default: false)
 	 * - args(3): nome del bucket contenente i file (necessario solo se non in locale) (default: "")
+	 * - args(4): id dell'utente per cui si vuole fare la raccomandazione (default: -1)
+	 * - args(5): soglia di similarità (default: 6.0)
+	 * - args(6): numero di raccomandazioni da fare (default: 10)
 	 */
     def main(args: Array[String]) = {
 
@@ -18,6 +21,9 @@ object Main {
 		val similarityGenerator = if (args.length > 1) args(1) == "true" else false
         val similarityEvaluation = if (args.length > 2) args(2) == "true" else false
 		val bucketName = if (args.length > 3) args(3) else ""
+		val userID = if (args.length > 4) args(4).toInt else -1
+		val threshold = if (args.length > 5) args(5).toFloat else 6.0f
+		val numRecommendations = if (args.length > 6) args(6).toInt else 10
 
 		if (!localenv && bucketName == "") {
 			throw new Exception("bucketName not set")
@@ -45,15 +51,17 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-		val raw_path = (if (localenv) "" else "gs://bucketName/") + "data/rating_complete_new.csv"
-		//val raw_path = (if (localenv) "" else "gs://bucketName/") + "data/rating_sample_example.csv"
+		val raw_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/rating_complete_new.csv"
+		//val raw_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/rating_sample_example.csv"
 
         val customRecommendation = new CustomRecommendation(sparkSession, localenv, bucketName)
 		
 		if (similarityGenerator) customRecommendation.generate(raw_path)
 		else customRecommendation.load()
 
-		customRecommendation.recommend(2, 0, 10)
+		if (userID > 0) {
+			customRecommendation.recommend(userID, threshold, numRecommendations)
+		}
 
         if (localenv && args(0) != "nostop") {
             println("Press enter to close")

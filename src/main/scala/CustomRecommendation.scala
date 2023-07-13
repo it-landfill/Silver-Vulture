@@ -1,9 +1,9 @@
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
-class CustomRecommendation(sparkSession: SparkSession, bucketName: String) {
-	val vectorRepr = new VectorRepresentation(sparkSession, bucketName)
-	val ranking = new Ranking(sparkSession, vectorRepr, bucketName)
+class CustomRecommendation(sparkSession: SparkSession, localenv: Boolean, bucketName: String) {
+	val vectorRepr = new VectorRepresentation(sparkSession, localenv, bucketName)
+	val ranking = new Ranking(sparkSession, vectorRepr, localenv, bucketName)
 	val predictor = new Prediction(sparkSession, vectorRepr, ranking)
 
 	def generate(data_path: String) {

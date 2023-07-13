@@ -4,7 +4,6 @@ echo Starting the script....
 
 PROJECT_ID="silver-vulture-1"
 CLUSTER_NAME="silver-nest"
-BUCKET_NAME="silver-vulture-data"
 
 echo Creating the Cluster...
 

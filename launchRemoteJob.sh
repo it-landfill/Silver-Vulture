@@ -7,7 +7,7 @@ rm -r ./target
 sbt package
 
 echo Uploading the jar to the bucket
-BUCKET_NAME="silver-vulture-data"
+BUCKET_NAME="silver-vulture-data_2"
 
 JAR_PATH=./target/scala-2.12/
 JAR_NAME=Silver-Vulture.jar

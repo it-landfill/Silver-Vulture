@@ -5,6 +5,7 @@ import org.apache.spark.sql.SparkSession
  * - localenv: se presente, esegue in locale (se equivale a "nostop" non attende input per chiudere)
  * - sv_generation: se presente, rigenera i file di ranking e vector representation
  * - sv_valuation: se presente, esegue l'evaluation
+ * - bucketName: nome del bucket su cui caricare i file
 */
 object Main {
     def main(args: Array[String]) = {
@@ -12,6 +13,11 @@ object Main {
 		val localenv = sys.env.contains("localenv") && sys.env("localenv") != ""
 		val similarityGenerator = sys.env.contains("sv_generation") && sys.env("sv_generation") != ""
         val similarityEvaluation = sys.env.contains("sv_evaluation") && sys.env("sv_evaluation") != ""
+		val bucketName = sys.env.getOrElse("bucketName", "")
+
+		if (!localenv && bucketName == "") {
+			throw new Exception("bucketName not set")
+		}
 
         // Generate spark session
         val sparkSession  = {		
@@ -35,10 +41,10 @@ object Main {
         // Set log level (Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN)
         sparkSession.sparkContext.setLogLevel("WARN");
 
-		val raw_path = (if (localenv) "" else "gs://silver-vulture-data/") + "data/rating_complete_new.csv"
-		//val raw_path = (if (localenv) "" else "gs://silver-vulture-data/") + "data/rating_sample_example.csv"
+		val raw_path = (if (localenv) "" else "gs://bucketName/") + "data/rating_complete_new.csv"
+		//val raw_path = (if (localenv) "" else "gs://bucketName/") + "data/rating_sample_example.csv"
 
-        val customRecommendation = new CustomRecommendation(sparkSession)
+        val customRecommendation = new CustomRecommendation(sparkSession, bucketName)
 		
 		if (similarityGenerator) customRecommendation.generate(raw_path)
 		else customRecommendation.load()

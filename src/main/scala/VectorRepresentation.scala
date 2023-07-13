@@ -4,7 +4,7 @@ import org.apache.spark.sql.types.{FloatType, StructType, IntegerType, StructFie
 
 // https://data-flair.training/blogs/apache-spark-rdd-vs-dataframe-vs-dataset/
 
-class VectorRepresentation(sparkSession: SparkSession) {
+class VectorRepresentation(sparkSession: SparkSession, bucketName: String) {
 
     private var mainDF: Option[DataFrame] = None
     private var userDF: Option[DataFrame] = None
@@ -79,7 +79,7 @@ class VectorRepresentation(sparkSession: SparkSession) {
         }
 
     def load(): Unit = {
-        val path = (if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/") + "data/silver_vulture_data_"
+        val path = (if (sys.env.contains("localenv")) "" else ("gs://"+bucketName+"/")) + "data/silver_vulture_data_"
 
         val mainSchema = new StructType()
             .add(StructField("user_id", IntegerType, nullable = false))
@@ -95,7 +95,7 @@ class VectorRepresentation(sparkSession: SparkSession) {
         userDF = Some(DataLoader.loadCSV(sparkSession, path+"userDF", userSchema))
     }
         def save(): Unit = {
-            val path = (if (sys.env.contains("localenv")) "" else "gs://silver-vulture-data/") + "data/silver_vulture_data_"
+            val path = (if (sys.env.contains("localenv")) "" else ("gs://"+bucketName+"/")) + "data/silver_vulture_data_"
             DataLoader.saveCSV(mainDF, path+"mainDF")
             DataLoader.saveCSV(userDF, path+"userDF")
         }

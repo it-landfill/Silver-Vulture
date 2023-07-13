@@ -4,7 +4,7 @@ import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import scala.collection.mutable
 
 class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentation, ranking: Ranking) {
-  def predict(user_id: Int): DataFrame = {
+  def predict(user_id: Int, threshold: Float = 6, limit: Int = 10): DataFrame = {
     /*
     Given an userid, the function returns an anime that might be of interest
 
@@ -75,7 +75,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
       .agg(slice(collect_list(struct(col("anime_2_id"), col("similarity"), col("normalized_rating"))), 1, 5).alias("topK"))
 
 
-    val predictions = topN.map((row: Row) => {
+    var predictions = topN.map((row: Row) => {
       import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
       var num = 0.0
       var den = 0.0
@@ -95,8 +95,9 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
     )
       .toDF("anime_id", "predicted_score")
       .orderBy("predicted_score")
-      .limit(10)
-      .filter(row => row.getDouble(1) >= 6)
+
+	if (limit > 0) predictions = predictions.limit(limit)
+	if (threshold > 0) predictions = predictions.filter(row => row.getDouble(1) >= threshold)
 
     predictions
   }

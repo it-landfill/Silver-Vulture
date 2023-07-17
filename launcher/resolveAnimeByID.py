@@ -43,9 +43,15 @@ def resolve_anime_by_id(anime_id):
 
 	# Find genres
 	genre_span = soup.find("span", string="Genres:")
-	genres = [genre.text for genre in genre_span.parent.find_all("a")]
-	if genres and len(genres) > 0:
-		a.genres = genres
+	if not genre_span:
+		genre_span = soup.find("span", string="Genre:")
+		
+	if not genre_span:
+		print(f"Anime {anime_id} has no genres")
+	else:
+		genres = [genre.text for genre in genre_span.parent.find_all("a")]
+		if genres and len(genres) > 0:
+			a.genres = genres
 		
 	return a
 
@@ -60,6 +66,26 @@ def resolve_anime_list(anime_list):
 	return info_list
 
 if __name__ == "__main__":
-	l = [[20785, 8.5], [20786, 5.6], [20787, 4.7]]
+	l = [[19815, 8.051214652916261],
+		[31764, 7.988826085126771],
+		[15315, 7.985755468095645],
+		[30240, 7.968056867381807],
+		[28297,7.9394837790288815],
+		[35790, 7.930399889384616],
+		[31339, 7.921984325470365],
+		[23755, 7.856063230517275],
+		[32998, 7.844393835973329],
+		[37349,  7.83575235670582],
+		[14345, 7.818407260905898],
+		[16011, 7.800141698884931],
+		[40080, 7.796863898723514],
+		[34944,7.7634344138097635],
+		[34636, 7.747805252152514],
+		[28677, 7.739063186092364],
+		[34542, 7.735384600428416],
+		[29093, 7.730204624956457],
+		[33071,  7.72221360479559],
+		[30015, 7.7080932242807]]
 	info_list = resolve_anime_list(l)
-	print(info_list[0])
+	for i, anime in enumerate(info_list):
+		print(f"{i+1} - {anime}")

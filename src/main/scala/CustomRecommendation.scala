@@ -1,4 +1,4 @@
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SparkSession, DataFrame}
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 class CustomRecommendation(sparkSession: SparkSession, localenv: Boolean, bucketName: String) {
@@ -28,8 +28,10 @@ class CustomRecommendation(sparkSession: SparkSession, localenv: Boolean, bucket
 		ranking.show()
 	}
 
-	def recommend(user_id: Int, threshold: Float = 6, limit: Int = 10) {
+	def recommend(user_id: Int, threshold: Float = 6, limit: Int = 10): DataFrame = {
 		println("Prediction for user " + user_id + ":")
-		predictor.predict(user_id, threshold, limit).show()
+		val pred = predictor.predict(user_id, threshold, limit)
+		pred.show()
+		pred
 	}
 }

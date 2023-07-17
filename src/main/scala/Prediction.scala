@@ -1,4 +1,4 @@
-import org.apache.spark.sql.functions.{col, slice, struct}
+import org.apache.spark.sql.functions.{col, slice, struct, desc}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.collection.mutable
@@ -94,7 +94,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
     }
     )
       .toDF("anime_id", "predicted_score")
-      .orderBy("predicted_score")
+      .orderBy(desc("predicted_score"))
 
 	if (limit > 0) predictions = predictions.limit(limit)
 	if (threshold > 0) predictions = predictions.filter(row => row.getDouble(1) >= threshold)

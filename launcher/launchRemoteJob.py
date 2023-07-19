@@ -1,6 +1,7 @@
 from google.cloud import storage
 from google.cloud import dataproc_v1 as dataproc
 import datetime
+from resolveAnimeByID import resolve_anime_list
 
 # Configuration
 
@@ -19,25 +20,39 @@ cluster_name = "silver-nest"
 
 
 def upload_file(bucket_name, file_name):
-    print("Uploading latest version of the jar...")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Uploading latest version of the jar...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage.Bucket(storage_client, bucket_name)
     uploader = bucket.blob(file_name)
     uploader.upload_from_filename(file_name)
-    print("Uploaded!")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Uploaded!")
 
 
 def download_file(bucket_name, file_name):
-    print("Downloading results...")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Downloading results...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage_client.get_bucket(bucket_name)
-    blob = bucket.blob(file_name)
-    data = blob.download_as_string()
+    files = list(bucket.list_blobs(prefix=file_name))
+    data = []
+    for elem in files:
+        data.append(elem.download_as_string())
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Downloaded!")
     return data
 
 
+def parse_csv(data):
+    result = []
+    for elem in data:
+        if len(elem):
+            lines = elem.decode("utf-8").split("\n")
+            for i in range(1, len(lines)-1):
+                elems = lines[i].split(",")
+                result.append([int(elems[0]), float(elems[1])])
+    return result
+
+
 def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
-    print("Creating the cluster...")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Creating the cluster...")
     cluster_client = dataproc.ClusterControllerClient.from_service_account_json(filename=cred_path, client_options={
         "api_endpoint": f"{region}-dataproc.googleapis.com:443"})
     cluster = {
@@ -66,8 +81,8 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
         "cluster": cluster
     })
     res = ops.result()
-    print(f"Cluster {res.cluster_name} created successfully.")
-    print("Creating job definition...")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Cluster {res.cluster_name} created successfully.")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Creating job definition...")
 
     job_client = dataproc.JobControllerClient.from_service_account_json(filename=cred_path, client_options={
         "api_endpoint": f"{region}-dataproc.googleapis.com:443"})
@@ -81,20 +96,20 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
             # "properties": {"spark.sql.autoBroadcastJoinThreshold": "-1"}
         }
     }
-    print("Job definition complete.")
-    print("Submitting job...")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Job definition complete.")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Submitting job...")
     start_time = datetime.datetime.now().timestamp()
     ops = job_client.submit_job_as_operation(
         request={"project_id": project_id, "region": region, "job": job}
     )
-    print("Job submitted.")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Job submitted.")
     try:
         response = ops.result(timeout=99999999999)
         print(response)
-        print("Done.")
+        print(f"[LOG] {datetime.datetime.now().timestamp()} - Done.")
     except Exception as e:
-        print(f"Something went wrong on the dataproc cluster.\n{e}")
-    print("Deleting the cluster...")
+        print(f"[ERR] {datetime.datetime.now().timestamp()} - Something went wrong on the dataproc cluster.\n{e}")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleting the cluster...")
     end_time = datetime.datetime.now().timestamp()
     import json
     print(f"{start_time} - {end_time}")
@@ -109,12 +124,11 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
         }
     )
     ops.result()
-    print("Cluster deletion complete!")
-
-    print(download_file(bucket_name, f"out/{user_id}.csv"))
-
-    print("All's done.")
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Cluster deletion complete!")
 
 
 upload_file(bucket_name, jar_name)
 create_and_run_cluster(project_id, region, cluster_name, bucket_name)
+result = resolve_anime_list(parse_csv(download_file(bucket_name, f"out/{user_id}")))
+for elem in result:
+    print(elem)

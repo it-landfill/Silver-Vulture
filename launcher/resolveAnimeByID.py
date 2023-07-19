@@ -23,7 +23,7 @@ def resolve_anime_by_id(anime_id):
 
 	a = Anime(anime_id)
 	
-	# Find title
+	#Find title
 	title_div = soup.find("div", class_="h1-title")
 	if not title_div:
 		print(f"Anime {anime_id} not found")

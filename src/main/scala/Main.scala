@@ -1,5 +1,4 @@
 import org.apache.spark.sql.SparkSession
-import com.github.mrpowers.spark.daria.sql.DariaWriters
 
 object Main {
 
@@ -54,7 +53,7 @@ object Main {
 
 		val raw_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/rating_complete_new.csv"
 		//val raw_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/rating_sample_example.csv"
-		val out_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "out/" + userID + ".csv"
+		val out_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "out/" + userID + "/"
 
         val customRecommendation = new CustomRecommendation(sparkSession, localenv, bucketName)
 		
@@ -63,7 +62,7 @@ object Main {
 
 		if (userID > 0) {
 			val recommendation = customRecommendation.recommend(userID, threshold, numRecommendations)
-			DariaWriters.writeThenMerge(recommendation, "csv", sparkSession.sparkContext, "tmp", out_path)
+			DataLoader.saveCSV(Option(recommendation.repartition(1)), out_path)
 		}
 
         if (localenv && args(0) != "nostop") {

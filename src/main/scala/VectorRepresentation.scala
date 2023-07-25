@@ -24,6 +24,28 @@ class VectorRepresentation(sparkSession: SparkSession, localenv: Boolean, bucket
     def getUserList: DataFrame =
         userDF.get // TODO: Gestire caso in cui sia None
 
+	/** Set the main DataFrame and update userDF
+	  * @param df DataFrame with the following columns:<br>
+	  *   - user_id: Int<br>
+	  *   - anime_id: Int<br>
+	  *   - rating: Int
+	*/
+	def setMainDF(df: DataFrame) {
+		mainDF = Some(df)
+
+		userDF =  Some(df
+					.select("user_id", "rating")
+					.groupBy("user_id")
+					.avg("rating")
+					.withColumnRenamed("avg(rating)", "average_rating")
+					.withColumn(
+						"average_rating",
+						col("average_rating").cast(FloatType)
+					))
+
+	}
+
+
     /** Parse the DataFrame into a RDD
       */
     def parseDF(df: DataFrame): Unit = {

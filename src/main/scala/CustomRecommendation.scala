@@ -28,10 +28,9 @@ class CustomRecommendation(sparkSession: SparkSession, localenv: Boolean, bucket
 		ranking.show()
 	}
 
-	def recommend(user_id: Int, threshold: Float = 6, limit: Int = 10): DataFrame = {
+	def recommend(user_id: Int, threshold: Float = 6, limit: Int = 10, similarity_ceil: Double = 0.5): DataFrame = {
 		println("Prediction for user " + user_id + ":")
-		val pred = predictor.predict(user_id, threshold, limit)
-		pred.show()
+		val pred = predictor.predict(user_id, threshold, limit, similarity_ceil)
 		pred
 	}
 }

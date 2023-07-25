@@ -4,7 +4,7 @@ import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import scala.collection.mutable
 
 class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentation, ranking: Ranking) {
-  def predict(user_id: Int, threshold: Float = 6, limit: Int = 10): DataFrame = {
+  def predict(user_id: Int, threshold: Float = 6, limit: Int = 10, similarity_ceil: Double = 0.5): DataFrame = {
     /*
     Given an userid, the function returns an anime that might be of interest
 
@@ -44,7 +44,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
       .except(anime_with_score)
 
 
-    val similarityDF = ranking.getSimilarityDF
+    val similarityDF = ranking.getSimilarityDF.filter(row => row.getFloat(2)>=similarity_ceil.toFloat)
     val main_df = vectorRepresentation.getMainDF
     val avg_user_rating = vectorRepresentation.getUserList.filter(row => row.getInt(0) == user_id).first().getFloat(1)
 

@@ -17,6 +17,7 @@ bucket_name = "silver-vulture-data_2"
 project_id = "silver-vulture-2"
 region = "europe-west1"
 cluster_name = "silver-nest"
+similarity_ceil = "0.4"
 
 
 def upload_file(bucket_name, file_name):
@@ -61,7 +62,7 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
         "config": {
             "master_config": {
                 "num_instances": 1,
-                "machine_type_uri": "n1-standard-2",
+                "machine_type_uri": "n1-highmem-2",
                 "disk_config": {"boot_disk_size_gb": 100}
             },
             "worker_config": {
@@ -91,7 +92,7 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
         "placement": {"cluster_name": cluster_name},
         "spark_job": {
             "args": [is_running_locally, regen_ranking, run_evaluation, bucket_name, user_id, threshold,
-                     number_of_results],
+                     number_of_results, similarity_ceil],
             "main_jar_file_uri": f"gs://{bucket_name}/{jar_name}",
             # "properties": {"spark.sql.autoBroadcastJoinThreshold": "-1"}
         }

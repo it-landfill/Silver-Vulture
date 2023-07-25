@@ -39,7 +39,10 @@ def resolve_anime_by_id(anime_id):
 	# Find score
 	score = soup.find("div", class_="score-label")
 	if score:
-		a.avg_score = float(score.text)
+		try:
+			a.avg_score = float(score.text)
+		except ValueError:
+			a.avg_score = 0
 
 	# Find genres
 	genre_span = soup.find("span", string="Genres:")
@@ -62,6 +65,7 @@ def resolve_anime_list(anime_list):
 		if(anime):
 			anime.pred_score = anime_pred[1]
 			info_list.append(anime)
+			print(anime)
 
 	return info_list
 

@@ -100,8 +100,8 @@ class VectorRepresentation(sparkSession: SparkSession, localenv: Boolean, bucket
             }
         }
 
-    def load(): Unit = {
-        val path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/silver_vulture_data_"
+    def load(folder: String): Unit = {
+        val path = (if (localenv) "" else ("gs://"+bucketName+"/")) + folder + "silver_vulture_data_"
 
         val mainSchema = new StructType()
             .add(StructField("user_id", IntegerType, nullable = false))
@@ -116,8 +116,8 @@ class VectorRepresentation(sparkSession: SparkSession, localenv: Boolean, bucket
         mainDF = Some(DataLoader.loadCSV(sparkSession, path+"mainDF", mainSchema))
         userDF = Some(DataLoader.loadCSV(sparkSession, path+"userDF", userSchema))
     }
-        def save(): Unit = {
-            val path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/silver_vulture_data_"
+        def save(folder: String): Unit = {
+            val path = (if (localenv) "" else ("gs://"+bucketName+"/")) + folder + "silver_vulture_data_"
             DataLoader.saveCSV(mainDF, path+"mainDF")
             DataLoader.saveCSV(userDF, path+"userDF")
         }

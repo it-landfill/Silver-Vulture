@@ -124,8 +124,8 @@ class Ranking(
         similarityDF = Some(aniMatrix)
 	}
 
-    def load(): Unit = {
-        val path =( if (localenv) "" else ("gs://"+bucketName+"/")) + "data/silver_vulture_data_"
+    def load(folder: String): Unit = {
+        val path =( if (localenv) "" else ("gs://"+bucketName+"/")) + folder +"silver_vulture_data_"
 
         val similaritySchema = new StructType()
             .add(StructField("anime_1_id", IntegerType, nullable = false))
@@ -137,8 +137,8 @@ class Ranking(
         )
     }
 
-    def save(): Unit = {
-        val path =( if (localenv) "" else ("gs://"+bucketName+"/")) + "data/silver_vulture_data_"
+    def save(folder: String): Unit = {
+        val path =( if (localenv) "" else ("gs://"+bucketName+"/")) + folder + "silver_vulture_data_"
         DataLoader.saveCSV(similarityDF, path + "similarity")
     }
 

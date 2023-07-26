@@ -59,7 +59,8 @@ object Main {
 	if (similarityEvaluation) {
 		val evaluation = new Evaluation(sparkSession, localenv, bucketName)
 		val user_id = 6
-		evaluation.generateTestDF(user_id, 0.2)
+		if (similarityGenerator) evaluation.generateTestDF(user_id, 0.2)
+		else evaluation.loadTestDF
 		val mae = evaluation.evaluateCutomRecommendations(user_id)
 		println("MAE: " + mae)
 	} else {

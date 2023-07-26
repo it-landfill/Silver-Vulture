@@ -15,16 +15,16 @@ class CustomRecommendation(sparkSession: SparkSession, localenv: Boolean, bucket
 		val rating_complete =  DataLoader.loadCSV(sparkSession, data_path, mainSchema)
 
 		vectorRepr.parseDF(rating_complete)
-		vectorRepr.save()
+		vectorRepr.save("data/")
 
 		ranking.normalizeRDD()
-		ranking.save()
+		ranking.save("data/")
 	}
 
 	def load() {
-		vectorRepr.load()
+		vectorRepr.load("data/")
 		vectorRepr.show()
-		ranking.load()
+		ranking.load("data/")
 		ranking.show()
 	}
 

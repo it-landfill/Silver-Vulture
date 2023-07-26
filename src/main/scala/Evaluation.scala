@@ -8,11 +8,17 @@ class Evaluation (sparkSession: SparkSession, localenv: Boolean, bucketName: Str
 	val predictor = new Prediction(sparkSession, vectorRepr, ranking)
 	var evaluationDF: Option[DataFrame] = None
 
+	val evaluationSchema = new StructType()
+            .add(StructField("user_id", IntegerType, nullable = false))
+            .add(StructField("anime_id", IntegerType, nullable = false))
+            .add(StructField("rating", IntegerType, nullable = false))
+            .add(StructField("normalized_rating", FloatType, nullable = false))
+
 	def generateTestDF(user_id: Int, sampleRate: Double = 0.2) {
 		// Define a local copy in order to modify it
 		var sRate = sampleRate
 		// Load the vector representation
-		vectorRepr.load()
+		vectorRepr.load("data/")
 		// Get the main DF
 		val mainDF = vectorRepr.getMainDF
 		// Filter for selected user
@@ -40,6 +46,16 @@ class Evaluation (sparkSession: SparkSession, localenv: Boolean, bucketName: Str
 		vectorRepr.setMainDF(testDF)
 		// Normalize the test DF
 		ranking.normalizeRDD()
+
+		vectorRepr.save("eval/")
+		ranking.save("eval/")
+		DataLoader.saveCSV(evaluationDF, "eval/evaluation")
+	}
+
+	def loadTestDF {
+		vectorRepr.load("eval/")
+		ranking.load("eval/")
+		evaluationDF = Some(DataLoader.loadCSV(sparkSession, "eval/evaluation", evaluationSchema))
 	}
 
 	def evaluateCutomRecommendations(user_id: Int): Double = {

@@ -56,29 +56,29 @@ object Main {
     //val raw_path = (if (localenv) "" else ("gs://"+bucketName+"/")) + "data/rating_sample_example.csv"
     val out_path = (if (localenv) "" else ("gs://" + bucketName + "/")) + "out/" + userID + "/"
 
-	if (similarityEvaluation) {
-		val evaluation = new Evaluation(sparkSession, localenv, bucketName)
-		val user_id = 6
-		if (similarityGenerator) evaluation.generateTestDF(user_id, 0.2)
-		else evaluation.loadTestDF
-		val mae = evaluation.evaluateCutomRecommendations(user_id)
-		println("MAE: " + mae)
-	} else {
-		val customRecommendation = new CustomRecommendation(sparkSession, localenv, bucketName)
+    if (similarityEvaluation) {
+      val evaluation = new Evaluation(sparkSession, localenv, bucketName)
+      val user_id = 6
+      if (similarityGenerator) evaluation.generateTestDF(user_id, 0.2)
+      else evaluation.loadTestDF
+      val mae = evaluation.evaluateCutomRecommendations(user_id, similarityCeil)
+      println("MAE: " + mae)
+    } else {
+      val customRecommendation = new CustomRecommendation(sparkSession, localenv, bucketName)
 
-		if (similarityGenerator) customRecommendation.generate(raw_path)
-		else customRecommendation.load()
+      if (similarityGenerator) customRecommendation.generate(raw_path)
+      else customRecommendation.load()
 
-		if (userID > 0) {
-		val recommendation = customRecommendation.recommend(userID, threshold, numRecommendations, similarityCeil)
-		DataLoader.saveCSV(Option(recommendation.repartition(1)), out_path)
-		}
+      if (userID > 0) {
+        val recommendation = customRecommendation.recommend(userID, threshold, numRecommendations, similarityCeil)
+        DataLoader.saveCSV(Option(recommendation.repartition(1)), out_path)
+      }
 
-		if (localenv && args(0) != "nostop") {
-		println("Press enter to close")
-		System.in.read
-		}
-		sparkSession.stop()
-	}
+      if (localenv && args(0) != "nostop") {
+        println("Press enter to close")
+        System.in.read
+      }
+      sparkSession.stop()
+    }
   }
 }

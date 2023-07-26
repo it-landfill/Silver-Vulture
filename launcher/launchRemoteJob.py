@@ -8,7 +8,7 @@ from resolveAnimeByID import resolve_anime_list
 cred_path = "./silver-vulture-2-34e87e1eb647.json"
 jar_name = "Silver-Vulture.jar"
 is_running_locally = "false"
-regen_ranking = "false"
+regen_ranking = "true"
 run_evaluation = "true"
 user_id = "8723558"
 threshold = "6"
@@ -94,7 +94,8 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
             "args": [is_running_locally, regen_ranking, run_evaluation, bucket_name, user_id, threshold,
                      number_of_results, similarity_ceil],
             "main_jar_file_uri": f"gs://{bucket_name}/{jar_name}",
-            # "properties": {"spark.sql.autoBroadcastJoinThreshold": "-1"}
+            #"properties": {"spark.sql.autoBroadcastJoinThreshold": "-1"}
+            "properties": {"spark.sql.broadcastTimeout": "1200"}
         }
     }
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Job definition complete.")

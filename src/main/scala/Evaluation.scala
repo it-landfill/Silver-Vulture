@@ -7,6 +7,7 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
   val ranking = new Ranking(sparkSession, vectorRepr, localenv, bucketName)
   val predictor = new Prediction(sparkSession, vectorRepr, ranking)
   var evaluationDF: Option[DataFrame] = None
+  val evalPath = (if (localenv) "" else ("gs://"+bucketName+"/")) + "eval/evaluation"
 
   val evaluationSchema = new StructType()
     .add(StructField("user_id", IntegerType, nullable = false))
@@ -49,13 +50,13 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
 
     vectorRepr.save("eval/")
     ranking.save("eval/")
-    DataLoader.saveCSV(evaluationDF, "eval/evaluation")
+    DataLoader.saveCSV(evaluationDF, evalPath)
   }
 
   def loadTestDF {
     vectorRepr.load("eval/")
     ranking.load("eval/")
-    evaluationDF = Some(DataLoader.loadCSV(sparkSession, "eval/evaluation", evaluationSchema))
+    evaluationDF = Some(DataLoader.loadCSV(sparkSession, evalPath, evaluationSchema))
   }
 
   def evaluateCutomRecommendations(user_id: Int, similarity_ceil: Double = 0.5): Double = {
@@ -70,14 +71,17 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
     // Get the predictions for the removed anime
     val predicitions = predictor.predictSelected(user_id, anime_to_eval, -1, -1, similarity_ceil)
 
-    if (anime_to_eval.count() != predicitions.count()) {
-      anime_to_eval.show()
-      predicitions.show()
+	val predCount = predicitions.count()
+	val animeCount = anime_to_eval.count()
+
+    if (animeCount != predCount) {
+	  println("animeCount: " + animeCount)
+	  println("predCount: " + predCount)
       throw new Exception("anime_to_eval.count() != predicitions.count()")
     }
 
     predicitions.join(evalDF, "anime_id")
       .map(row => (row.getDouble(1) - row.getInt(3)).abs)
-      .reduce(_ + _) / predicitions.count()
+      .reduce(_ + _) / predCount
   }
 }

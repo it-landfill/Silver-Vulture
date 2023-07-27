@@ -12,24 +12,32 @@ class MLLibPrediction(sparkSession: SparkSession, localenv: Boolean, bucketName:
 	var validation: RDD[Rating] = _
 	var test: RDD[Rating] = _
 	var bestModel: Option[MatrixFactorizationModel] = None
-	var testRmse: Double = 0.0
+	var testMae: Double = 0.0
 	val modelPath = (if (localenv) "" else ("gs://"+bucketName+"/")) + "MLLib/bestModel"
   	val vectorRepr = new VectorRepresentation(sparkSession, localenv, bucketName)
-	vectorRepr.load("data/")
 
-	/** Compute RMSE (Root Mean Squared Error). */
-    def computeRmse(model: MatrixFactorizationModel, data: RDD[Rating], n: Long): Double = {
-        val predictions: RDD[Rating] = model.predict(data.map(x => (x.user, x.product)))
-        val predictionsAndRatings = predictions.map(x => ((x.user, x.product), x.rating))
-            .join(data.map(x => ((x.user, x.product), x.rating)))
-            .values
-        math.sqrt(predictionsAndRatings.map(x => (x._1 - x._2) * (x._1 - x._2)).reduce(_ + _) / n)
-    }
+    def computeMae(model: MatrixFactorizationModel, data: RDD[Rating], n: Long): Double = {
+		var predicitions: RDD[Rating] = model.predict(data.map(x => (x.user, x.product)))
+		val predictionsAndRatings = predicitions.map(x => ((x.user, x.product), x.rating))
+			.join(data.map(x => ((x.user, x.product), x.rating)))
+			.values
+		predictionsAndRatings.map(x => math.abs(x._1 - x._2)).mean
+	}
 
 	def generateModel(data_path: String, trainPercent: Double = 0.6, validationPercent: Double = 0.5, numPartitions: Int = 4) {
 		import sparkSession.implicits._      
 
-		val mainDF = vectorRepr  
+		val mainSchema = new StructType()
+			.add(StructField("user_id", IntegerType, nullable = false))
+			.add(StructField("anime_id", IntegerType, nullable = false))
+			.add(StructField("rating", IntegerType, nullable = false))
+
+		val rating_complete = DataLoader.loadCSV(sparkSession, data_path, mainSchema)
+
+		vectorRepr.parseDF(rating_complete)
+		vectorRepr.save("data/")
+
+		val mainDF = vectorRepr.getMainDF.map(row => Rating(row.getInt(0), row.getInt(1), row.getInt(2))).cache()
 		
 		val trainingDF = mainDF.sample(false, trainPercent).repartition(numPartitions).cache()
 		val evalDF = mainDF.except(trainingDF)
@@ -49,51 +57,59 @@ class MLLibPrediction(sparkSession: SparkSession, localenv: Boolean, bucketName:
         val ranks = List(8, 12)
         val lambdas = List(0.1, 10.0)
         val numIters = List(10, 20)
-        var bestValidationRmse = Double.MaxValue
+        var bestValidationMae = Double.MaxValue
         var bestRank = 0
         var bestLambda = -1.0
         var bestNumIter = -1
         for (rank <- ranks; lambda <- lambdas; numIter <- numIters) {
             val model = ALS.train(training, rank, numIter, lambda)
-            val validationRmse = computeRmse(model, validation, numValidation)
-            println("RMSE (validation) = " + validationRmse + " for the model trained with rank = "
+            val validationMae = computeMae(model, validation, numValidation)
+            println("Mae (validation) = " + validationMae + " for the model trained with rank = "
                 + rank + ", lambda = " + lambda + ", and numIter = " + numIter + ".")
-            if (validationRmse < bestValidationRmse) {
+            if (validationMae < bestValidationMae) {
                 bestModel = Some(model)
-                bestValidationRmse = validationRmse
+                bestValidationMae = validationMae
                 bestRank = rank
                 bestLambda = lambda
                 bestNumIter = numIter
             }
         }
 
-		testRmse = computeRmse(bestModel.get, test, numTest)
+		testMae = computeMae(bestModel.get, test, numTest)
 		
 
         println("The best model was trained with rank = " + bestRank + " and lambda = " + bestLambda
-            + ", and numIter = " + bestNumIter + ", and its RMSE on the test set is " + testRmse + ".")
+            + ", and numIter = " + bestNumIter + ", and its MAE on the test set is " + testMae + ".")
+
+		saveModel
 	}
 
   def evaluateModel {
 		// create a naive baseline and compare it with the best model
-
         val meanRating = training.union(validation).map(_.rating).mean
-        val baselineRmse =
-            math.sqrt(test.map(x => (meanRating - x.rating) * (meanRating - x.rating)).mean)
-        val improvement = (baselineRmse - testRmse) / baselineRmse * 100
+        val baselineMae = test.map(x => (meanRating - x.rating).abs).mean
+        val improvement = (baselineMae - testMae) / baselineMae * 100
         println("The best model improves the baseline by " + "%1.2f".format(improvement) + "%.")
   }
 
-  def predictSelected(user_id: Int, anime_to_eval: org.apache.spark.rdd.RDD[Int]): Array[Rating] = {
-		bestModel.get
-			.predict(anime_to_eval.map((6, _)))
-			.collect()
-			.sortBy(- _.rating)
-			.take(50)
+  def predictSelected(user_id: Int, anime_to_eval: org.apache.spark.rdd.RDD[Int], limit: Int): DataFrame = {
+		import sparkSession.implicits._
+		val res = bestModel.get
+					.predict(anime_to_eval.map((user_id, _)))
+					.collect()
+					.sortBy(- _.rating)
+					.take(50)
+
+		sparkSession.sparkContext
+			.parallelize(res)
+			.toDF()
+			.drop("user")
+			.withColumnRenamed("product", "anime_id")
+			.withColumnRenamed("rating", "predicted_score")
   }
 
-  def predict(user_id: Int, limit: Int = 10): Array[org.apache.spark.mllib.recommendation.Rating] = {
-		 import sparkSession.implicits._
+  def predict(user_id: Int, limit: Int = 10): DataFrame = {
+		import sparkSession.implicits._
 
 		// List of anime ids that user has reviewed
 		val anime_with_score = vectorRepr
@@ -109,7 +125,7 @@ class MLLibPrediction(sparkSession: SparkSession, localenv: Boolean, bucketName:
 		.distinct()
 		.except(anime_with_score)
 		
-		predictSelected(user_id, anime_to_eval.rdd).take(limit)
+		predictSelected(user_id, anime_to_eval.rdd, limit)
   }
 
   def saveModel {
@@ -123,5 +139,6 @@ class MLLibPrediction(sparkSession: SparkSession, localenv: Boolean, bucketName:
 
   def loadModel {
     bestModel = Some(MatrixFactorizationModel.load(sparkSession.sparkContext, modelPath))
+	vectorRepr.load("data/")
   }
 }

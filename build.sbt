@@ -4,6 +4,7 @@ ThisBuild / scalaVersion := "2.12.17"
 
 ThisBuild / libraryDependencies += "org.apache.spark" %% "spark-core" % "3.3.2"
 ThisBuild / libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.3.2"
+ThisBuild / libraryDependencies += "org.apache.spark" %% "spark-mllib" % "3.3.2"
 
 lazy val root = (project in file("."))
   .settings(

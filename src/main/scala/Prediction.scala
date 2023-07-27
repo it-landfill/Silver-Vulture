@@ -44,7 +44,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
       .except(anime_with_score)
 
 
-    val similarityDF = ranking.getSimilarityDF.filter(row => row.getFloat(2) >= similarity_ceil.toFloat)
+    val similarityDF = ranking.getSimilarityDF
     val main_df = vectorRepresentation.getMainDF
     val avg_user_rating = vectorRepresentation.getUserList.filter(row => row.getInt(0) == user_id).first().getFloat(1)
 
@@ -105,7 +105,7 @@ class Prediction(session: SparkSession, vectorRepresentation: VectorRepresentati
   def predictSelected(user_id: Int, anime_to_eval: DataFrame, threshold: Float = 6, limit: Int = 10, similarity_ceil: Double = 0.5): DataFrame = {
     import session.implicits._
 
-    val similarityDF = ranking.getSimilarityDF.filter(row => row.getFloat(2) >= similarity_ceil.toFloat)
+    val similarityDF = ranking.getSimilarityDF
     val main_df = vectorRepresentation.getMainDF
     val avg_user_rating = vectorRepresentation.getUserList.filter(row => row.getInt(0) == user_id).first().getFloat(1)
 

@@ -63,8 +63,7 @@ object Main {
     if (similarityEvaluation) {
 		if (useMLLib) { 
 			val mllibPredictor = new MLLibPrediction(sparkSession, localenv, bucketName)
-			if (similarityGenerator) mllibPredictor.generateModel(raw_path)
-			else mllibPredictor.loadModel
+			mllibPredictor.generateModel(raw_path)
 			mllibPredictor.evaluateModel
 		} else {
 			val evaluation = new Evaluation(sparkSession, localenv, bucketName)

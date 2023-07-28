@@ -3,7 +3,6 @@ import org.apache.spark.rdd.{RDD}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.mllib.recommendation.{ALS, Rating, MatrixFactorizationModel}
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
-import org.apache.hadoop.fs.{FileSystem, Path}
 
 import scala.collection.mutable
 
@@ -35,7 +34,7 @@ class MLLibPrediction(sparkSession: SparkSession, localenv: Boolean, bucketName:
 		val rating_complete = DataLoader.loadCSV(sparkSession, data_path, mainSchema)
 
 		vectorRepr.parseDF(rating_complete)
-		vectorRepr.save("data/")
+		vectorRepr.save("MLLib/")
 
 		val mainDF = vectorRepr.getMainDF.map(row => Rating(row.getInt(0), row.getInt(1), row.getInt(2))).cache()
 		
@@ -128,17 +127,15 @@ class MLLibPrediction(sparkSession: SparkSession, localenv: Boolean, bucketName:
 		predictSelected(user_id, anime_to_eval.rdd, limit)
   }
 
+	/**
+	 * Save the model to the MLLib folder. This folder must not have a model saved already.
+	 */
   def saveModel {
-    val fs = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
-    val outPutPath = new Path(modelPath)
-
-    if (fs.exists(outPutPath))
-      fs.delete(outPutPath, true)
       bestModel.get.save(sparkSession.sparkContext, modelPath)
   }
 
   def loadModel {
     bestModel = Some(MatrixFactorizationModel.load(sparkSession.sparkContext, modelPath))
-	vectorRepr.load("data/")
+	vectorRepr.load("MLLib/")
   }
 }

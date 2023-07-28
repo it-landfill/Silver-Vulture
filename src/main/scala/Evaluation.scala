@@ -7,7 +7,7 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
   val ranking = new Ranking(sparkSession, vectorRepr, localenv, bucketName)
   val predictor = new Prediction(sparkSession, vectorRepr, ranking)
   var evaluationDF: Option[DataFrame] = None
-  val evalPath = (if (localenv) "" else ("gs://"+bucketName+"/")) + "eval/evaluation"
+  val evalPath = (if (localenv) "" else ("gs://" + bucketName + "/")) + "eval/evaluation"
 
   val evaluationSchema = new StructType()
     .add(StructField("user_id", IntegerType, nullable = false))
@@ -71,12 +71,11 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
     // Get the predictions for the removed anime
     val predicitions = predictor.predictSelected(user_id, anime_to_eval, -1, -1, similarity_ceil)
 
-	val predCount = predicitions.count()
-	val animeCount = anime_to_eval.count()
-
+    val predCount = predicitions.count()
+    val animeCount = anime_to_eval.count()
+    println("animeCount: " + animeCount)
+    println("predCount: " + predCount)
     if (animeCount != predCount) {
-	  println("animeCount: " + animeCount)
-	  println("predCount: " + predCount)
       throw new Exception("anime_to_eval.count() != predicitions.count()")
     }
 

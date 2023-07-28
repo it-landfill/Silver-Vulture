@@ -2,26 +2,10 @@ from google.cloud import storage
 from google.cloud import dataproc_v1 as dataproc
 import datetime
 from resolveAnimeByID import resolve_anime_list
-
-# Configuration
-
-cred_path = "./silver-vulture-2-34e87e1eb647.json"
-jar_name = "Silver-Vulture.jar"
-is_running_locally = "false"
-use_mllib = "false"
-regen_ranking = "true"
-run_evaluation = "true"
-user_id = "8723558"
-threshold = "6"
-number_of_results = "100"
-bucket_name = "silver-vulture-data_2"
-project_id = "silver-vulture-2"
-region = "europe-west1"
-cluster_name = "silver-nest"
-similarity_ceil = "0.4"
+import json
 
 
-def upload_file(bucket_name, file_name):
+def upload_file(bucket_name, file_name, cred_path):
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Uploading latest version of the jar...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage.Bucket(storage_client, bucket_name)
@@ -30,7 +14,7 @@ def upload_file(bucket_name, file_name):
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Uploaded!")
 
 
-def download_file(bucket_name, file_name):
+def download_file(bucket_name, file_name, cred_path):
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Downloading results...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage_client.get_bucket(bucket_name)
@@ -47,13 +31,28 @@ def parse_csv(data):
     for elem in data:
         if len(elem):
             lines = elem.decode("utf-8").split("\n")
-            for i in range(1, len(lines)-1):
+            for i in range(1, len(lines) - 1):
                 elems = lines[i].split(",")
                 result.append([int(elems[0]), float(elems[1])])
     return result
 
 
-def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
+def clean_mllib(bucket_name, cred_path):
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleting mllib model...")
+    storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
+    bucket = storage_client.get_bucket(bucket_name)
+    try:
+        files = list(bucket.list_blobs(prefix="MLLib"))
+        for file in files:
+            file.delete()
+    except Exception:
+        pass
+    print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleted!")
+
+
+def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_path, is_running_locally, use_mllib,
+                           regen_ranking, run_evaluation, user_id, threshold, number_of_results, similarity_ceil,
+                           jar_name):
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Creating the cluster...")
     cluster_client = dataproc.ClusterControllerClient.from_service_account_json(filename=cred_path, client_options={
         "api_endpoint": f"{region}-dataproc.googleapis.com:443"})
@@ -95,7 +94,7 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
             "args": [is_running_locally, use_mllib, regen_ranking, run_evaluation, bucket_name, user_id, threshold,
                      number_of_results, similarity_ceil],
             "main_jar_file_uri": f"gs://{bucket_name}/{jar_name}",
-            #"properties": {"spark.sql.autoBroadcastJoinThreshold": "-1"}
+            # "properties": {"spark.sql.autoBroadcastJoinThreshold": "-1"}
             "properties": {"spark.sql.broadcastTimeout": "1200"}
         }
     }
@@ -114,7 +113,7 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
         print(f"[ERR] {datetime.datetime.now().timestamp()} - Something went wrong on the dataproc cluster.\n{e}")
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleting the cluster...")
     end_time = datetime.datetime.now().timestamp()
-    import json
+
     print(f"{start_time} - {end_time}")
     with open("experiments.json", "a+") as file:
         json.dump({"config": cluster, "start": str(start_time), "end": str(end_time)}, file)
@@ -130,8 +129,17 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name):
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Cluster deletion complete!")
 
 
-upload_file(bucket_name, jar_name)
-create_and_run_cluster(project_id, region, cluster_name, bucket_name)
-result = resolve_anime_list(parse_csv(download_file(bucket_name, f"out/{user_id}")))
+with open("config.json", "r") as file:
+    config = json.load(file)
+
+upload_file(config['bucket_name'], config['jar_name'], config['cred_path'])
+if config['use_mllib'] == "true" and config['regen_ranking'] == "true":
+    clean_mllib(config['bucket_name'], config['cred_path'])
+create_and_run_cluster(config['project_id'], config['region'], config['cluster_name'], config['bucket_name'],
+                       config['cred_path'], config["is_running_locally"], config["use_mllib"], config["regen_ranking"],
+                       config["run_evaluation"], config["user_id"], config["threshold"],
+                       config["number_of_results"], config["similarity_ceil"], config["jar_name"])
+result = resolve_anime_list(
+    parse_csv(download_file(config['bucket_name'], f"out/{config['user_id']}", config['cred_path'])))
 for elem in result:
     print(elem)

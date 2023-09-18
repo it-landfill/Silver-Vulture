@@ -6,23 +6,23 @@ import json
 
 
 def upload_file(bucket_name, file_name, cred_path):
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Uploading latest version of the jar...")
+    print(f"[LOG] {datetime.datetime.now()} - Uploading latest version of the jar...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage.Bucket(storage_client, bucket_name)
     uploader = bucket.blob(file_name)
     uploader.upload_from_filename(file_name)
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Uploaded!")
+    print(f"[LOG] {datetime.datetime.now()} - Uploaded!")
 
 
 def download_file(bucket_name, file_name, cred_path):
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Downloading results...")
+    print(f"[LOG] {datetime.datetime.now()} - Downloading results...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage_client.get_bucket(bucket_name)
     files = list(bucket.list_blobs(prefix=file_name))
     data = []
     for elem in files:
         data.append(elem.download_as_string())
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Downloaded!")
+    print(f"[LOG] {datetime.datetime.now()} - Downloaded!")
     return data
 
 
@@ -38,7 +38,7 @@ def parse_csv(data):
 
 
 def clean_mllib(bucket_name, cred_path):
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleting mllib model...")
+    print(f"[LOG] {datetime.datetime.now()} - Deleting mllib model...")
     storage_client = storage.Client.from_service_account_json(json_credentials_path=cred_path)
     bucket = storage_client.get_bucket(bucket_name)
     try:
@@ -47,13 +47,13 @@ def clean_mllib(bucket_name, cred_path):
             file.delete()
     except Exception:
         pass
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleted!")
+    print(f"[LOG] {datetime.datetime.now()} - Deleted!")
 
 
 def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_path, is_running_locally, use_mllib,
                            regen_ranking, run_evaluation, user_id, threshold, number_of_results, similarity_ceil,
                            jar_name):
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Creating the cluster...")
+    print(f"[LOG] {datetime.datetime.now()} - Creating the cluster...")
     cluster_client = dataproc.ClusterControllerClient.from_service_account_json(filename=cred_path, client_options={
         "api_endpoint": f"{region}-dataproc.googleapis.com:443"})
     cluster = {
@@ -62,12 +62,12 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
         "config": {
             "master_config": {
                 "num_instances": 1,
-                "machine_type_uri": "n2-highmem-2",
+                "machine_type_uri": "n1-highmem-4",
                 "disk_config": {"boot_disk_size_gb": 100}
             },
             "worker_config": {
-                "num_instances": 3,
-                "machine_type_uri": "n2-highmem-2",
+                "num_instances": 5,
+                "machine_type_uri": "n1-highmem-4",
                 "disk_config": {"boot_disk_size_gb": 100}
             },
             "endpoint_config": {
@@ -82,8 +82,8 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
         "cluster": cluster
     })
     res = ops.result()
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Cluster {res.cluster_name} created successfully.")
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Creating job definition...")
+    print(f"[LOG] {datetime.datetime.now()} - Cluster {res.cluster_name} created successfully.")
+    print(f"[LOG] {datetime.datetime.now()} - Creating job definition...")
 
     job_client = dataproc.JobControllerClient.from_service_account_json(filename=cred_path, client_options={
         "api_endpoint": f"{region}-dataproc.googleapis.com:443"})
@@ -98,20 +98,20 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
             "properties": {"spark.sql.broadcastTimeout": "1200"}
         }
     }
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Job definition complete.")
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Submitting job...")
+    print(f"[LOG] {datetime.datetime.now()} - Job definition complete.")
+    print(f"[LOG] {datetime.datetime.now()} - Submitting job...")
     start_time = datetime.datetime.now()
     ops = job_client.submit_job_as_operation(
         request={"project_id": project_id, "region": region, "job": job}
     )
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Job submitted.")
+    print(f"[LOG] {datetime.datetime.now()} - Job submitted.")
     try:
         response = ops.result(timeout=99999999999)
         print(response)
-        print(f"[LOG] {datetime.datetime.now().timestamp()} - Done.")
+        print(f"[LOG] {datetime.datetime.now()} - Done.")
     except Exception as e:
-        print(f"[ERR] {datetime.datetime.now().timestamp()} - Something went wrong on the dataproc cluster.\n{e}")
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleting the cluster...")
+        print(f"[ERR] {datetime.datetime.now()} - Something went wrong on the dataproc cluster.\n{e}")
+    print(f"[LOG] {datetime.datetime.now()} - Deleting the cluster...")
     end_time = datetime.datetime.now()
     total = (end_time - start_time).total_seconds()
     print(f"[LOG] {total} seconds or {total / 60} minutes needed.")
@@ -126,7 +126,7 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
         }
     )
     ops.result()
-    print(f"[LOG] {datetime.datetime.now().timestamp()} - Cluster deletion complete!")
+    print(f"[LOG] {datetime.datetime.now()} - Cluster deletion complete!")
 
 
 with open("config.json", "r") as file:
@@ -138,7 +138,7 @@ if config['use_mllib'] == "true" and config['regen_ranking'] == "true":
 create_and_run_cluster(config['project_id'], config['region'], config['cluster_name'], config['bucket_name'],
                        config['cred_path'], config["is_running_locally"], config["use_mllib"], config["regen_ranking"],
                        config["run_evaluation"], config["user_id"], config["threshold"],
-                       config["number_of_results"], config["similarity_ceil"], config["jar_name"])
+                       config["number_of_results"], "0.4", config["jar_name"])
 result = resolve_anime_list(
     parse_csv(download_file(config['bucket_name'], f"out/{config['user_id']}", config['cred_path'])))
 if config["run_evaluation"] == "false":

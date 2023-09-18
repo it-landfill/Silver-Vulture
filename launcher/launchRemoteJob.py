@@ -62,12 +62,12 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
         "config": {
             "master_config": {
                 "num_instances": 1,
-                "machine_type_uri": "n1-highmem-2",
+                "machine_type_uri": "n2-highmem-2",
                 "disk_config": {"boot_disk_size_gb": 100}
             },
             "worker_config": {
-                "num_instances": 5,
-                "machine_type_uri": "n1-standard-4",
+                "num_instances": 3,
+                "machine_type_uri": "n2-highmem-2",
                 "disk_config": {"boot_disk_size_gb": 100}
             },
             "endpoint_config": {
@@ -100,7 +100,7 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
     }
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Job definition complete.")
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Submitting job...")
-    start_time = datetime.datetime.now().timestamp()
+    start_time = datetime.datetime.now()
     ops = job_client.submit_job_as_operation(
         request={"project_id": project_id, "region": region, "job": job}
     )
@@ -112,9 +112,9 @@ def create_and_run_cluster(project_id, region, cluster_name, bucket_name, cred_p
     except Exception as e:
         print(f"[ERR] {datetime.datetime.now().timestamp()} - Something went wrong on the dataproc cluster.\n{e}")
     print(f"[LOG] {datetime.datetime.now().timestamp()} - Deleting the cluster...")
-    end_time = datetime.datetime.now().timestamp()
-
-    print(f"{start_time} - {end_time}")
+    end_time = datetime.datetime.now()
+    total = (end_time - start_time).total_seconds()
+    print(f"[LOG] {total} seconds or {total / 60} minutes needed.")
     with open("experiments.json", "a+") as file:
         json.dump({"config": cluster, "start": str(start_time), "end": str(end_time)}, file)
 

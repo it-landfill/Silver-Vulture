@@ -28,7 +28,7 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
     var evaluation = userScores.sample(false, sRate)
 
     // If sample is empty, increase the sample rate
-    while (evaluation.isEmpty && sRate < 1) {
+    while (evaluation.isEmpty && sRate < 0.9) {
       sRate += 0.1
       println("Increasing sample rate to " + sRate)
       evaluation = userScores.sample(false, sRate)
@@ -69,7 +69,7 @@ class Evaluation(sparkSession: SparkSession, localenv: Boolean, bucketName: Stri
     val evalDF = evaluationDF.get
 
     // Get the predictions for the removed anime
-    val predicitions = predictor.predictSelected(user_id, anime_to_eval, -1, -1, similarity_ceil)
+    val predicitions = predictor.predictSelected(user_id, anime_to_eval, -1, -1, similarity_ceil).persist()
 
     val predCount = predicitions.count()
     val animeCount = anime_to_eval.count()

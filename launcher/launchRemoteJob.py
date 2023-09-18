@@ -141,5 +141,6 @@ create_and_run_cluster(config['project_id'], config['region'], config['cluster_n
                        config["number_of_results"], config["similarity_ceil"], config["jar_name"])
 result = resolve_anime_list(
     parse_csv(download_file(config['bucket_name'], f"out/{config['user_id']}", config['cred_path'])))
-for elem in result:
-    print(elem)
+if config["run_evaluation"] == "false":
+    for elem in result:
+        print(elem)

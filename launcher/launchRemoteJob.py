@@ -139,8 +139,8 @@ create_and_run_cluster(config['project_id'], config['region'], config['cluster_n
                        config['cred_path'], config["is_running_locally"], config["use_mllib"], config["regen_ranking"],
                        config["run_evaluation"], config["user_id"], config["threshold"],
                        config["number_of_results"], "0.4", config["jar_name"])
-result = resolve_anime_list(
-    parse_csv(download_file(config['bucket_name'], f"out/{config['user_id']}", config['cred_path'])))
 if config["run_evaluation"] == "false":
+    result = resolve_anime_list(
+        parse_csv(download_file(config['bucket_name'], f"out/{config['user_id']}", config['cred_path'])))
     for elem in result:
         print(elem)

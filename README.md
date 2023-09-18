@@ -34,4 +34,5 @@ Il file di configurazione del launcher è in formato JSON, e contiene al suo int
 - "project_id": id del progetto su GCP;
 - "region": regione del cluster;
 - "cluster_name": nome del cluster;
+
 Per eseguire l'evaluation, è importante aver prima eseguito un job di ranking.
